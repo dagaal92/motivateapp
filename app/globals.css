@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .tick {
+    background-image: repeating-linear-gradient(
+      90deg,
+      #33353d 0,
+      #33353d 1px,
+      transparent 1px,
+      transparent 8px
+    );
+  }
+}

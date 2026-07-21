@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum EstadoPedido {
+  PENDIENTE
+  CONFIRMADO
+  EN_CAMINO
+  ENTREGADO
+  CANCELADO
+}
+
+enum TipoMovimiento {
+  INGRESO
+  EGRESO
+}
+
+model Cuenta {
+  id           String       @id @default(cuid())
+  nombre       String       @unique
+  saldo        Int          @default(0)
+  creadoEn     DateTime     @default(now())
+  movimientos  Movimiento[]
+  pedidosFlete Pedido[]     @relation("PedidoCuentaFlete")
+}
+
+model Movimiento {
+  id          String         @id @default(cuid())
+  cuentaId    String
+  cuenta      Cuenta         @relation(fields: [cuentaId], references: [id])
+  tipo        TipoMovimiento
+  monto       Int
+  descripcion String?
+  creadoEn    DateTime       @default(now())
+
+  @@index([cuentaId])
+}
+
+model Pedido {
+  id             String       @id @default(cuid())
+  numeroOrden    String?
+  cliente        String?
+  telefono       String
+  direccion      String?
+  ciudad         String?
+  producto       String?
+  cantidad       Int?
+  valorTotal     Int          @default(0)
+  estado         EstadoPedido @default(PENDIENTE)
+  origen         String       @default("MANUAL")
+  shopifyOrderId String?      @unique
+
+  prioridad      String?
+  general        String?
+  numeroGuia     String?
+  transportadora String?
+  envio          String?
+  ingresoDinero  String?
+  departamento   String?
+  municipio      String?
+
+  cuentaFleteId  String?
+  cuentaFlete    Cuenta?      @relation("PedidoCuentaFlete", fields: [cuentaFleteId], references: [id])
+
+  notas          String?
+  creadoEn       DateTime     @default(now())
+  actualizadoEn  DateTime     @updatedAt
+
+  productos      ProductoPedido[]
+  fletes         FletePedido[]
+
+  @@index([estado])
+  @@index([creadoEn])
+  @@index([cuentaFleteId])
+}
+
+model ProductoPedido {
+  id         String   @id @default(cuid())
+  pedidoId   String
+  pedido     Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  color      String?
+  referencia String?
+  cantidad   Int      @default(1)
+  creadoEn   DateTime @default(now())
+
+  @@index([pedidoId])
+}
+
+model FletePedido {
+  id          String   @id @default(cuid())
+  pedidoId    String
+  pedido      Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  valor       Int      @default(0)
+  observacion String?
+  creadoEn    DateTime @default(now())
+
+  @@index([pedidoId])
+}
+
+model OpcionMaestra {
+  id       String   @id @default(cuid())
+  categoria String
+  valor    String
+  creadoEn DateTime @default(now())
+
+  @@unique([categoria, valor])
+  @@index([categoria])
+}
