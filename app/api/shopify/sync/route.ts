@@ -49,20 +49,27 @@ export async function POST() {
         municipiosVistos.add(pedidoData.municipio);
       }
 
-      const mapaProductos = await resolverProductosShopify(prisma, productos);
-      const productosConId = productos.map((p) => {
-        const { shopifyVariantId, ...resto } = p;
-        const productoId = shopifyVariantId ? mapaProductos.get(shopifyVariantId) : undefined;
-        if (shopifyVariantId && !productoId) sinCoincidencia++;
-        return { ...resto, productoId: productoId || null };
-      });
-
       const existente = await prisma.pedido.findUnique({
         where: { shopifyOrderId: pedidoData.shopifyOrderId },
         include: { productos: true },
       });
 
       if (existente) {
+        // Conserva el productoId que ya tenía cada línea (por referencia+color),
+        // no lo vuelve a resolver por variant_id. Así un pedido que ya existía
+        // antes de que el catálogo de inventario existiera se queda sin
+        // productoId para siempre (no descuenta stock retroactivo al
+        // resincronizar), mientras que un pedido creado después de tener
+        // inventario conserva su vínculo en cada resync posterior.
+        const idsPorClave = new Map(
+          existente.productos.map((p) => [`${p.referencia}||${p.color}`, p.productoId])
+        );
+        const productosConId = productos.map((p) => {
+          const { shopifyVariantId, ...resto } = p;
+          const clave = `${resto.referencia}||${resto.color}`;
+          return { ...resto, productoId: idsPorClave.get(clave) ?? null };
+        });
+
         const dataSinDegradar = sinDegradarDatosDeContacto(existente, pedidoData);
         await prisma.$transaction(async (tx) => {
           await tx.productoPedido.deleteMany({ where: { pedidoId: existente.id } });
@@ -76,6 +83,16 @@ export async function POST() {
         });
         actualizados++;
       } else {
+        // Pedido nuevo: aquí sí se resuelve productoId por variant_id, porque
+        // no hay historial previo que proteger.
+        const mapaProductos = await resolverProductosShopify(prisma, productos);
+        const productosConId = productos.map((p) => {
+          const { shopifyVariantId, ...resto } = p;
+          const productoId = shopifyVariantId ? mapaProductos.get(shopifyVariantId) : undefined;
+          if (shopifyVariantId && !productoId) sinCoincidencia++;
+          return { ...resto, productoId: productoId || null };
+        });
+
         await prisma.$transaction(async (tx) => {
           const nuevoPedido = await tx.pedido.create({
             data: { ...pedidoData, productos: { create: productosConId } },
