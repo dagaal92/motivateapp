@@ -258,7 +258,7 @@ export default function Home() {
   const labelCls = "text-xs font-medium text-muted2 mb-1 block";
 
   return (
-    <main className="p-6 max-w-[1400px] mx-auto space-y-5">
+    <main className="p-4 sm:p-6 max-w-[1400px] mx-auto space-y-5">
       {/* Encabezado */}
       <div className="bg-card border border-borderLight rounded-xl p-5">
         <div className="flex items-start justify-between flex-wrap gap-4">
@@ -481,6 +481,7 @@ export default function Home() {
         )}
 
         {!loading && !error && pedidosFiltrados.length > 0 && (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-paper text-left text-xs font-semibold text-muted2 uppercase tracking-wide">
@@ -560,6 +561,7 @@ export default function Home() {
               })}
             </tbody>
           </table>
+          </div>
         )}
         {!loading && !error && pedidosFiltrados.length > 0 && (
           <Pagination

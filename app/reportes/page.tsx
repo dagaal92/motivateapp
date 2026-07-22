@@ -148,7 +148,7 @@ export default function ReportesPage() {
   };
 
   return (
-    <main className="p-6 max-w-[1400px] mx-auto space-y-5">
+    <main className="p-4 sm:p-6 max-w-[1400px] mx-auto space-y-5">
       <div className="bg-card border border-borderLight rounded-xl p-5">
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div className="flex items-start gap-3">
@@ -228,6 +228,7 @@ function Seccion({
         <p className="text-sm font-semibold text-ink2">{titulo}</p>
         <p className="text-sm font-semibold text-ink2">{fmt(totalReal)}</p>
       </div>
+      <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-paper text-left text-xs font-semibold text-muted2 uppercase tracking-wide">
@@ -240,6 +241,7 @@ function Seccion({
         </thead>
         <tbody>{filas.map(render)}</tbody>
       </table>
+      </div>
     </div>
   );
 }

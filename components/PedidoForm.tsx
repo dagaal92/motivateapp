@@ -235,11 +235,11 @@ export default function PedidoForm({ pedidoId }: { pedidoId?: string }) {
   const opcionesDe = (categoria: string) => opciones[categoria] || [];
 
   if (cargandoPedido) {
-    return <main className="p-6 max-w-[1200px] mx-auto text-sm text-muted2">Cargando pedido…</main>;
+    return <main className="p-4 sm:p-6 max-w-[1200px] mx-auto text-sm text-muted2">Cargando pedido…</main>;
   }
 
   return (
-    <main className="p-6 max-w-[1200px] mx-auto space-y-5">
+    <main className="p-4 sm:p-6 max-w-[1200px] mx-auto space-y-5">
       <form onSubmit={guardar} className="space-y-5">
         {/* Encabezado */}
         <div className="bg-card border border-borderLight rounded-xl p-5">

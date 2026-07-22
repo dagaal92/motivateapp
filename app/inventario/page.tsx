@@ -117,7 +117,7 @@ export default function InventarioPage() {
   };
 
   return (
-    <main className="p-6 max-w-[1200px] mx-auto space-y-5">
+    <main className="p-4 sm:p-6 max-w-[1200px] mx-auto space-y-5">
       <div className="bg-card border border-borderLight rounded-xl p-5">
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div className="flex items-start gap-3">
@@ -214,6 +214,7 @@ export default function InventarioPage() {
               Aún no hay productos. Importa el catálogo de Shopify o agrega uno manual.
             </p>
           ) : (
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-paper text-left text-xs font-semibold text-muted2 uppercase tracking-wide">
@@ -252,6 +253,7 @@ export default function InventarioPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
           <Pagination
             page={pagina}
