@@ -4,10 +4,13 @@ import type { Prisma } from "@prisma/client";
 import { BILLETERAS_FLETE } from "@/lib/billeterasFlete";
 import { ajustarIngresoPedido } from "@/lib/balance";
 import { ajustarStockPedido } from "@/lib/inventario";
+import { upsertClienteDesdePedido } from "@/lib/clientes";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const telefono = req.nextUrl.searchParams.get("telefono");
     const pedidos = await prisma.pedido.findMany({
+      where: telefono ? { telefono } : undefined,
       orderBy: { creadoEn: "desc" },
     });
     return NextResponse.json(pedidos);
@@ -133,6 +136,7 @@ export async function POST(req: NextRequest) {
 
       await ajustarIngresoPedido(tx, null, nuevoPedido);
       await ajustarStockPedido(tx, null, nuevoPedido);
+      await upsertClienteDesdePedido(tx, nuevoPedido);
 
       return nuevoPedido;
     });

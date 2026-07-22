@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { mapPedidoData, type ShopifyOrder } from "@/lib/shopify";
 import { ajustarStockPedido, resolverProductosShopify } from "@/lib/inventario";
+import { upsertClienteDesdePedido } from "@/lib/clientes";
 
 function verificarFirma(rawBody: string, hmacHeader: string | null, secret: string) {
   if (!hmacHeader) return false;
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest) {
         include: { productos: true },
       });
       await ajustarStockPedido(tx, null, nuevoPedido);
+      await upsertClienteDesdePedido(tx, nuevoPedido);
       return nuevoPedido;
     });
 

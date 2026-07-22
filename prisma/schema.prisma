@@ -136,6 +136,18 @@ model FletePedido {
   @@index([pedidoId])
 }
 
+model Cliente {
+  id            String   @id @default(cuid())
+  telefono      String   @unique
+  nombre        String?
+  email         String?
+  ciudad        String?
+  departamento  String?
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+}
+
 model OpcionMaestra {
   id       String   @id @default(cuid())
   categoria String

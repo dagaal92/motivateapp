@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { mapPedidoData, sinDegradarDatosDeContacto, type ShopifyOrder } from "@/lib/shopify";
 import { ajustarIngresoPedido } from "@/lib/balance";
 import { ajustarStockPedido, resolverProductosShopify } from "@/lib/inventario";
+import { upsertClienteDesdePedido } from "@/lib/clientes";
 
 export async function POST() {
   const domain = process.env.SHOPIFY_STORE_DOMAIN;
@@ -80,6 +81,7 @@ export async function POST() {
           });
           await ajustarIngresoPedido(tx, existente, pedidoActualizado);
           await ajustarStockPedido(tx, existente, pedidoActualizado);
+          await upsertClienteDesdePedido(tx, pedidoActualizado);
         });
         actualizados++;
       } else {
@@ -99,6 +101,7 @@ export async function POST() {
             include: { productos: true },
           });
           await ajustarStockPedido(tx, null, nuevoPedido);
+          await upsertClienteDesdePedido(tx, nuevoPedido);
         });
         creados++;
       }

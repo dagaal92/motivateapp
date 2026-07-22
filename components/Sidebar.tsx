@@ -24,7 +24,7 @@ const NAV_ITEMS = [
   { label: "Listados", icon: ListChecks, href: "/maestros", funcional: true },
   { label: "Reportes", icon: DollarSign, href: "/reportes", funcional: true },
   { label: "Inventario", icon: Package, href: "/inventario", funcional: true },
-  { label: "Clientes", icon: Users, href: "#", funcional: false },
+  { label: "Clientes", icon: Users, href: "/clientes", funcional: true },
   { label: "Preparación pedidos", icon: ClipboardList, href: "#", funcional: false },
 ];
 

@@ -4,6 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { BILLETERAS_FLETE } from "@/lib/billeterasFlete";
 import { ajustarIngresoPedido } from "@/lib/balance";
 import { ajustarStockPedido } from "@/lib/inventario";
+import { upsertClienteDesdePedido } from "@/lib/clientes";
 
 export async function GET(
   _req: NextRequest,
@@ -157,6 +158,7 @@ export async function PATCH(
 
       await ajustarIngresoPedido(tx, existente, pedidoActualizado);
       await ajustarStockPedido(tx, existente, pedidoActualizado);
+      await upsertClienteDesdePedido(tx, pedidoActualizado);
 
       return pedidoActualizado;
     });
