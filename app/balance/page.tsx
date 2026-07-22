@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import Pagination from "@/components/Pagination";
 import {
   Wallet,
   Landmark,
@@ -80,6 +81,8 @@ const ICONO_CUENTA: Record<
   },
 };
 
+const PAGE_SIZE = 25;
+
 const fmt = (n: number) =>
   new Intl.NumberFormat("es-CO", {
     style: "currency",
@@ -107,6 +110,7 @@ export default function BalancePage() {
   const [categoriasGasto, setCategoriasGasto] = useState<Opcion[]>([]);
   const [categoriasIngreso, setCategoriasIngreso] = useState<Opcion[]>([]);
   const [soloSinCategoria, setSoloSinCategoria] = useState(false);
+  const [pagina, setPagina] = useState(1);
 
   const [form, setForm] = useState({
     cuentaId: "",
@@ -152,7 +156,14 @@ export default function BalancePage() {
 
   useEffect(() => {
     cargarMovimientos(soloSinCategoria).catch(() => {});
+    setPagina(1);
   }, [soloSinCategoria, cargarMovimientos]);
+
+  const totalPaginasMovimientos = Math.max(1, Math.ceil(movimientos.length / PAGE_SIZE));
+  const movimientosPaginados = useMemo(
+    () => movimientos.slice((pagina - 1) * PAGE_SIZE, pagina * PAGE_SIZE),
+    [movimientos, pagina]
+  );
 
   const opcionesCategoria = form.tipo === "EGRESO" ? categoriasGasto : categoriasIngreso;
 
@@ -435,7 +446,7 @@ export default function BalancePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {movimientos.map((m) => (
+                  {movimientosPaginados.map((m) => (
                     <tr key={m.id} className="border-t border-borderLight">
                       <td className="px-5 py-3 text-muted2">{fmtFechaHora(m.creadoEn)}</td>
                       <td className="px-5 py-3 text-ink2">{m.cuenta.nombre}</td>
@@ -485,6 +496,12 @@ export default function BalancePage() {
                 </tbody>
               </table>
             )}
+            <Pagination
+              page={pagina}
+              totalPages={totalPaginasMovimientos}
+              total={movimientos.length}
+              onChange={setPagina}
+            />
           </div>
         </>
       )}

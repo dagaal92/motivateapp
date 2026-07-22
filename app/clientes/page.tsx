@@ -1,7 +1,10 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useState } from "react";
-import { Users, Pencil, Trash2, Plus, Minus } from "lucide-react";
+import { Users, Pencil, Trash2, Plus, Minus, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import Pagination from "@/components/Pagination";
+
+const PAGE_SIZE = 25;
 
 type Cliente = {
   id: string;
@@ -44,8 +47,20 @@ const ESTADO_LABEL: Record<string, string> = {
   CANCELADO: "Cancelado",
 };
 
+type Resumen = {
+  totalClientes: number;
+  clientesConCompra: number;
+  clientesRecompra: number;
+  recompraPct: number;
+};
+
 export default function ClientesPage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [resumen, setResumen] = useState<Resumen | null>(null);
+  const [total, setTotal] = useState(0);
+  const [pagina, setPagina] = useState(1);
+  const [sortBy, setSortBy] = useState<"nombre" | "compras">("nombre");
+  const [order, setOrder] = useState<"asc" | "desc">("asc");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandido, setExpandido] = useState<string | null>(null);
@@ -58,20 +73,44 @@ export default function ClientesPage() {
   const cargar = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/clientes");
+      const params = new URLSearchParams({
+        page: String(pagina),
+        pageSize: String(PAGE_SIZE),
+        sortBy,
+        order,
+      });
+      const res = await fetch(`/api/clientes?${params.toString()}`);
       if (!res.ok) throw new Error();
-      setClientes(await res.json());
+      const data = await res.json();
+      setClientes(data.data);
+      setTotal(data.total);
+      setResumen(data.resumen);
       setError(null);
     } catch {
       setError("No se pudieron cargar los clientes.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [pagina, sortBy, order]);
 
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  const ordenarPor = (campo: "nombre" | "compras") => {
+    if (sortBy === campo) {
+      setOrder((o) => (o === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(campo);
+      setOrder(campo === "compras" ? "desc" : "asc");
+    }
+    setPagina(1);
+  };
+
+  const iconoOrden = (campo: "nombre" | "compras") => {
+    if (sortBy !== campo) return <ArrowUpDown size={12} className="text-muted2" />;
+    return order === "asc" ? <ArrowUp size={12} /> : <ArrowDown size={12} />;
+  };
 
   const toggleExpandir = async (cliente: Cliente) => {
     if (expandido === cliente.id) {
@@ -147,6 +186,31 @@ export default function ClientesPage() {
             </p>
           </div>
         </div>
+
+        {resumen && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+            <div className="bg-accentSoft/60 border border-accent/20 rounded-lg p-3">
+              <p className="text-xs font-medium text-accent">Total clientes</p>
+              <p className="text-lg font-semibold text-ink2 mt-0.5">
+                {resumen.totalClientes.toLocaleString("es-CO")}
+              </p>
+            </div>
+            <div className="bg-greenSoft/60 border border-green/20 rounded-lg p-3">
+              <p className="text-xs font-medium text-green">Clientes con al menos 1 compra</p>
+              <p className="text-lg font-semibold text-ink2 mt-0.5">
+                {resumen.clientesConCompra.toLocaleString("es-CO")}
+              </p>
+            </div>
+            <div className="bg-amberSoft/60 border border-amber2/20 rounded-lg p-3">
+              <p className="text-xs font-medium text-amber2">
+                % de recompra <span className="text-amber2/70">(2+ compras)</span>
+              </p>
+              <p className="text-lg font-semibold text-ink2 mt-0.5">
+                {resumen.recompraPct.toFixed(1)}%
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {error && (
@@ -163,10 +227,24 @@ export default function ClientesPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-paper text-left text-xs font-semibold text-muted2 uppercase tracking-wide">
-                  <th className="px-5 py-3">Cliente</th>
+                  <th className="px-5 py-3">
+                    <button
+                      onClick={() => ordenarPor("nombre")}
+                      className="flex items-center gap-1 hover:text-ink2 transition-colors"
+                    >
+                      Cliente {iconoOrden("nombre")}
+                    </button>
+                  </th>
                   <th className="px-5 py-3">Contacto</th>
                   <th className="px-5 py-3">Ubicación</th>
-                  <th className="px-5 py-3">Compras</th>
+                  <th className="px-5 py-3">
+                    <button
+                      onClick={() => ordenarPor("compras")}
+                      className="flex items-center gap-1 hover:text-ink2 transition-colors"
+                    >
+                      Compras {iconoOrden("compras")}
+                    </button>
+                  </th>
                   <th className="px-5 py-3">Acciones</th>
                 </tr>
               </thead>
@@ -322,6 +400,12 @@ export default function ClientesPage() {
               </tbody>
             </table>
           )}
+          <Pagination
+            page={pagina}
+            totalPages={Math.max(1, Math.ceil(total / PAGE_SIZE))}
+            total={total}
+            onChange={setPagina}
+          />
         </div>
       )}
     </main>

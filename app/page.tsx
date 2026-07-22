@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
+import Pagination from "@/components/Pagination";
 import {
   ShoppingCart,
   Upload,
@@ -39,6 +40,8 @@ type Pedido = {
   origen: string;
   creadoEn: string;
 };
+
+const PAGE_SIZE = 25;
 
 const ESTADOS: EstadoPedido[] = [
   "PENDIENTE",
@@ -99,6 +102,7 @@ export default function Home() {
     tipoPago: "",
   });
   const [filtrosAplicados, setFiltrosAplicados] = useState(filtros);
+  const [pagina, setPagina] = useState(1);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -154,7 +158,10 @@ export default function Home() {
     await fetch(`/api/pedidos/${id}`, { method: "DELETE" });
   };
 
-  const aplicarFiltros = () => setFiltrosAplicados(filtros);
+  const aplicarFiltros = () => {
+    setFiltrosAplicados(filtros);
+    setPagina(1);
+  };
   const limpiarFiltros = () => {
     const vacio = {
       pedido: "",
@@ -169,6 +176,7 @@ export default function Home() {
     };
     setFiltros(vacio);
     setFiltrosAplicados(vacio);
+    setPagina(1);
   };
 
   const pedidosFiltrados = useMemo(() => {
@@ -192,6 +200,16 @@ export default function Home() {
       return true;
     });
   }, [pedidos, filtrosAplicados]);
+
+  const totalPaginas = Math.max(1, Math.ceil(pedidosFiltrados.length / PAGE_SIZE));
+  const pedidosPaginados = useMemo(
+    () => pedidosFiltrados.slice((pagina - 1) * PAGE_SIZE, pagina * PAGE_SIZE),
+    [pedidosFiltrados, pagina]
+  );
+
+  useEffect(() => {
+    if (pagina > totalPaginas) setPagina(totalPaginas);
+  }, [pagina, totalPaginas]);
 
   const opcionesGeneral = useMemo(
     () => Array.from(new Set(pedidos.map((p) => p.general).filter(Boolean))) as string[],
@@ -477,7 +495,7 @@ export default function Home() {
               </tr>
             </thead>
             <tbody>
-              {pedidosFiltrados.map((p) => {
+              {pedidosPaginados.map((p) => {
                 return (
                   <tr key={p.id} className="border-t border-borderLight hover:bg-paper/60 transition-colors">
                     <td className="px-5 py-3 font-medium text-ink2">
@@ -542,6 +560,14 @@ export default function Home() {
               })}
             </tbody>
           </table>
+        )}
+        {!loading && !error && pedidosFiltrados.length > 0 && (
+          <Pagination
+            page={pagina}
+            totalPages={totalPaginas}
+            total={pedidosFiltrados.length}
+            onChange={setPagina}
+          />
         )}
       </div>
     </main>

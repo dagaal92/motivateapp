@@ -1,7 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Package, Plus, RefreshCw } from "lucide-react";
+import Pagination from "@/components/Pagination";
+
+const PAGE_SIZE = 25;
 
 type Producto = {
   id: string;
@@ -25,6 +28,7 @@ export default function InventarioPage() {
   const [guardandoAlta, setGuardandoAlta] = useState(false);
   const [nuevoStock, setNuevoStock] = useState<Record<string, string>>({});
   const [alta, setAlta] = useState({ nombre: "", variante: "", stock: "" });
+  const [pagina, setPagina] = useState(1);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -80,6 +84,16 @@ export default function InventarioPage() {
       alert("No se pudo actualizar el stock");
     }
   };
+
+  const totalPaginas = Math.max(1, Math.ceil(productos.length / PAGE_SIZE));
+  const productosPaginados = useMemo(
+    () => productos.slice((pagina - 1) * PAGE_SIZE, pagina * PAGE_SIZE),
+    [productos, pagina]
+  );
+
+  useEffect(() => {
+    if (pagina > totalPaginas) setPagina(totalPaginas);
+  }, [pagina, totalPaginas]);
 
   const agregarManual = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -210,7 +224,7 @@ export default function InventarioPage() {
                 </tr>
               </thead>
               <tbody>
-                {productos.map((p) => (
+                {productosPaginados.map((p) => (
                   <tr key={p.id} className="border-t border-borderLight">
                     <td className="px-5 py-3 text-ink2">{p.nombre}</td>
                     <td className="px-5 py-3 text-muted2">{p.variante || "—"}</td>
@@ -239,6 +253,12 @@ export default function InventarioPage() {
               </tbody>
             </table>
           )}
+          <Pagination
+            page={pagina}
+            totalPages={totalPaginas}
+            total={productos.length}
+            onChange={setPagina}
+          />
         </div>
       )}
     </main>
