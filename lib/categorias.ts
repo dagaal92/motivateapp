@@ -6,8 +6,6 @@ export const CATEGORIAS_MAESTRAS = [
   { key: "INGRESO_DINERO", label: "Ingreso Dinero" },
   { key: "DEPARTAMENTO", label: "Departamento" },
   { key: "MUNICIPIO", label: "Municipio" },
-  { key: "COLOR", label: "Color" },
-  { key: "REFERENCIA", label: "Referencia" },
   { key: "CATEGORIA_GASTO", label: "Categoría de gasto" },
   { key: "CATEGORIA_INGRESO", label: "Categoría de ingreso" },
 ] as const;

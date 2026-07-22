@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { mapPedidoData, type ShopifyOrder } from "@/lib/shopify";
+import { ajustarStockPedido, resolverProductosShopify } from "@/lib/inventario";
 
 function verificarFirma(rawBody: string, hmacHeader: string | null, secret: string) {
   if (!hmacHeader) return false;
@@ -40,11 +41,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, id: existente.id, duplicado: true });
     }
 
-    const pedido = await prisma.pedido.create({
-      data: {
-        ...data,
-        productos: { create: productos },
-      },
+    const mapaProductos = await resolverProductosShopify(prisma, productos);
+    const productosConId = productos.map((p) => {
+      const { shopifyVariantId, ...resto } = p;
+      const productoId = shopifyVariantId ? mapaProductos.get(shopifyVariantId) : undefined;
+      return { ...resto, productoId: productoId || null };
+    });
+
+    const pedido = await prisma.$transaction(async (tx) => {
+      const nuevoPedido = await tx.pedido.create({
+        data: {
+          ...data,
+          productos: { create: productosConId },
+        },
+        include: { productos: true },
+      });
+      await ajustarStockPedido(tx, null, nuevoPedido);
+      return nuevoPedido;
     });
 
     return NextResponse.json({ ok: true, id: pedido.id }, { status: 201 });

@@ -96,15 +96,33 @@ model Pedido {
 }
 
 model ProductoPedido {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   pedidoId   String
-  pedido     Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  pedido     Pedido    @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
   color      String?
   referencia String?
-  cantidad   Int      @default(1)
-  creadoEn   DateTime @default(now())
+  cantidad   Int       @default(1)
+  productoId String?
+  producto   Producto? @relation(fields: [productoId], references: [id], onDelete: SetNull)
+  creadoEn   DateTime  @default(now())
 
   @@index([pedidoId])
+  @@index([productoId])
+}
+
+model Producto {
+  id               String   @id @default(cuid())
+  shopifyProductId String?
+  shopifyVariantId String?  @unique
+  nombre           String
+  variante         String?
+  stock            Int      @default(0)
+  activo           Boolean  @default(true)
+  creadoEn         DateTime @default(now())
+  actualizadoEn    DateTime @updatedAt
+  lineas           ProductoPedido[]
+
+  @@index([nombre])
 }
 
 model FletePedido {

@@ -16,8 +16,6 @@ const SEED: Record<string, string[]> = {
     "Valle del Cauca", "Vaupés", "Vichada", "Bogotá D.C.",
   ],
   MUNICIPIO: [],
-  COLOR: [],
-  REFERENCIA: [],
   CATEGORIA_GASTO: [
     "Flete",
     "Publicidad",

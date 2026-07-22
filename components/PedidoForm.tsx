@@ -9,8 +9,14 @@ import { BILLETERAS_FLETE } from "@/lib/billeterasFlete";
 
 type Opcion = { id: string; categoria: string; valor: string };
 type Cuenta = { id: string; nombre: string; saldo: number };
+type ProductoCatalogo = { id: string; nombre: string; variante: string | null; activo: boolean };
 
-type ProductoLinea = { color: string; referencia: string; cantidad: string };
+type ProductoLinea = {
+  productoId: string | null;
+  color: string;
+  referencia: string;
+  cantidad: string;
+};
 type FleteLinea = { valor: string; observacion: string };
 
 const ESTADOS = ["PENDIENTE", "CONFIRMADO", "EN_CAMINO", "ENTREGADO", "CANCELADO"];
@@ -35,6 +41,7 @@ export default function PedidoForm({ pedidoId }: { pedidoId?: string }) {
 
   const [opciones, setOpciones] = useState<Record<string, Opcion[]>>({});
   const [cuentas, setCuentas] = useState<Cuenta[]>([]);
+  const [productosCatalogo, setProductosCatalogo] = useState<ProductoCatalogo[]>([]);
   const [cargandoPedido, setCargandoPedido] = useState(esEdicion);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -86,6 +93,16 @@ export default function PedidoForm({ pedidoId }: { pedidoId?: string }) {
     })();
   }, []);
 
+  // Cargar el catálogo de inventario para elegir producto/variante
+  useEffect(() => {
+    (async () => {
+      const res = await fetch("/api/inventario");
+      if (!res.ok) return;
+      const data: ProductoCatalogo[] = await res.json();
+      setProductosCatalogo(data.filter((p) => p.activo));
+    })();
+  }, []);
+
   // Si es edición, cargar el pedido existente
   useEffect(() => {
     if (!pedidoId) return;
@@ -116,6 +133,7 @@ export default function PedidoForm({ pedidoId }: { pedidoId?: string }) {
         });
         setProductos(
           (p.productos || []).map((pr: any) => ({
+            productoId: pr.productoId || null,
             color: pr.color || "",
             referencia: pr.referencia || "",
             cantidad: String(pr.cantidad || 1),
@@ -141,11 +159,26 @@ export default function PedidoForm({ pedidoId }: { pedidoId?: string }) {
     [fletes]
   );
 
+  const catalogoPorNombre = useMemo(() => {
+    const mapa = new Map<string, ProductoCatalogo[]>();
+    for (const pc of productosCatalogo) {
+      const lista = mapa.get(pc.nombre) || [];
+      lista.push(pc);
+      mapa.set(pc.nombre, lista);
+    }
+    return mapa;
+  }, [productosCatalogo]);
+
+  const nombresCatalogo = useMemo(
+    () => Array.from(catalogoPorNombre.keys()).sort(),
+    [catalogoPorNombre]
+  );
+
   const campo = (key: keyof typeof form) => (e: React.ChangeEvent<any>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
 
   const agregarProducto = () =>
-    setProductos((p) => [...p, { color: "", referencia: "", cantidad: "1" }]);
+    setProductos((p) => [...p, { productoId: null, color: "", referencia: "", cantidad: "1" }]);
   const quitarProducto = (i: number) =>
     setProductos((p) => p.filter((_, idx) => idx !== i));
   const actualizarProducto = (i: number, campo: keyof ProductoLinea, valor: string) =>
@@ -376,54 +409,111 @@ export default function PedidoForm({ pedidoId }: { pedidoId?: string }) {
             <p className="text-sm text-muted2">No hay productos agregados.</p>
           ) : (
             <div className="space-y-3">
-              {productos.map((p, i) => (
-                <div key={i} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_100px_40px] gap-3 items-end">
-                  <div>
-                    <label className={labelCls}>Color</label>
-                    <select
-                      value={p.color}
-                      onChange={(e) => actualizarProducto(i, "color", e.target.value)}
-                      className={inputCls}
-                    >
-                      <option value="">Seleccionar color...</option>
-                      {opcionesDe("COLOR").map((o) => (
-                        <option key={o.id} value={o.valor}>{o.valor}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className={labelCls}>Referencia</label>
-                    <select
-                      value={p.referencia}
-                      onChange={(e) => actualizarProducto(i, "referencia", e.target.value)}
-                      className={inputCls}
-                    >
-                      <option value="">Seleccionar referencia...</option>
-                      {opcionesDe("REFERENCIA").map((o) => (
-                        <option key={o.id} value={o.valor}>{o.valor}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className={labelCls}>Cant.</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={p.cantidad}
-                      onChange={(e) => actualizarProducto(i, "cantidad", e.target.value)}
-                      className={inputCls}
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => quitarProducto(i)}
-                    className="text-red hover:text-red/70 h-10 flex items-center justify-center"
-                    title="Quitar"
+              {productos.map((p, i) => {
+                const productoActual = p.productoId
+                  ? productosCatalogo.find((pc) => pc.id === p.productoId)
+                  : undefined;
+                const nombreActual = productoActual?.nombre || "";
+                const variantesDisponibles = nombreActual
+                  ? catalogoPorNombre.get(nombreActual) || []
+                  : [];
+
+                return (
+                  <div
+                    key={i}
+                    className="flex flex-wrap gap-3 items-end border-b border-borderLight pb-3 last:border-0 last:pb-0"
                   >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
+                    <div className="w-52">
+                      <label className={labelCls}>Producto</label>
+                      <select
+                        value={nombreActual}
+                        onChange={(e) => {
+                          const nombre = e.target.value;
+                          setProductos((prev) =>
+                            prev.map((pr, idx) =>
+                              idx === i
+                                ? { ...pr, productoId: null, referencia: nombre, color: "" }
+                                : pr
+                            )
+                          );
+                        }}
+                        className={inputCls}
+                      >
+                        <option value="">Otro (no está en el catálogo)</option>
+                        {nombresCatalogo.map((n) => (
+                          <option key={n} value={n}>{n}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {nombreActual ? (
+                      <div className="w-48">
+                        <label className={labelCls}>Variante</label>
+                        <select
+                          value={p.productoId || ""}
+                          onChange={(e) => {
+                            const id = e.target.value;
+                            const variante = variantesDisponibles.find((v) => v.id === id);
+                            setProductos((prev) =>
+                              prev.map((pr, idx) =>
+                                idx === i
+                                  ? { ...pr, productoId: id || null, color: variante?.variante || "" }
+                                  : pr
+                              )
+                            );
+                          }}
+                          className={inputCls}
+                        >
+                          <option value="">Seleccionar...</option>
+                          {variantesDisponibles.map((v) => (
+                            <option key={v.id} value={v.id}>{v.variante || "Único"}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="w-40">
+                          <label className={labelCls}>Color</label>
+                          <input
+                            value={p.color}
+                            onChange={(e) => actualizarProducto(i, "color", e.target.value)}
+                            className={inputCls}
+                            placeholder="Color"
+                          />
+                        </div>
+                        <div className="w-40">
+                          <label className={labelCls}>Referencia</label>
+                          <input
+                            value={p.referencia}
+                            onChange={(e) => actualizarProducto(i, "referencia", e.target.value)}
+                            className={inputCls}
+                            placeholder="Referencia"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    <div className="w-24">
+                      <label className={labelCls}>Cant.</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={p.cantidad}
+                        onChange={(e) => actualizarProducto(i, "cantidad", e.target.value)}
+                        className={inputCls}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => quitarProducto(i)}
+                      className="text-red hover:text-red/70 h-10 flex items-center justify-center"
+                      title="Quitar"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

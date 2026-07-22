@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { mapPedidoData, sinDegradarDatosDeContacto, type ShopifyOrder } from "@/lib/shopify";
 import { ajustarIngresoPedido } from "@/lib/balance";
+import { ajustarStockPedido, resolverProductosShopify } from "@/lib/inventario";
 
 export async function POST() {
   const domain = process.env.SHOPIFY_STORE_DOMAIN;
@@ -38,6 +39,7 @@ export async function POST() {
 
     let creados = 0;
     let actualizados = 0;
+    let sinCoincidencia = 0;
     const municipiosVistos = new Set<string>();
 
     for (const order of data.orders) {
@@ -47,8 +49,17 @@ export async function POST() {
         municipiosVistos.add(pedidoData.municipio);
       }
 
+      const mapaProductos = await resolverProductosShopify(prisma, productos);
+      const productosConId = productos.map((p) => {
+        const { shopifyVariantId, ...resto } = p;
+        const productoId = shopifyVariantId ? mapaProductos.get(shopifyVariantId) : undefined;
+        if (shopifyVariantId && !productoId) sinCoincidencia++;
+        return { ...resto, productoId: productoId || null };
+      });
+
       const existente = await prisma.pedido.findUnique({
         where: { shopifyOrderId: pedidoData.shopifyOrderId },
+        include: { productos: true },
       });
 
       if (existente) {
@@ -57,14 +68,20 @@ export async function POST() {
           await tx.productoPedido.deleteMany({ where: { pedidoId: existente.id } });
           const pedidoActualizado = await tx.pedido.update({
             where: { id: existente.id },
-            data: { ...dataSinDegradar, productos: { create: productos } },
+            data: { ...dataSinDegradar, productos: { create: productosConId } },
+            include: { productos: true },
           });
           await ajustarIngresoPedido(tx, existente, pedidoActualizado);
+          await ajustarStockPedido(tx, existente, pedidoActualizado);
         });
         actualizados++;
       } else {
-        await prisma.pedido.create({
-          data: { ...pedidoData, productos: { create: productos } },
+        await prisma.$transaction(async (tx) => {
+          const nuevoPedido = await tx.pedido.create({
+            data: { ...pedidoData, productos: { create: productosConId } },
+            include: { productos: true },
+          });
+          await ajustarStockPedido(tx, null, nuevoPedido);
         });
         creados++;
       }
@@ -80,7 +97,7 @@ export async function POST() {
       });
     }
 
-    return NextResponse.json({ creados, actualizados, total: data.orders.length });
+    return NextResponse.json({ creados, actualizados, total: data.orders.length, sinCoincidencia });
   } catch (error) {
     console.error(error);
     return NextResponse.json(

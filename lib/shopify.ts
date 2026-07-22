@@ -12,6 +12,8 @@ export type ShopifyOrder = {
     title: string;
     variant_title: string | null;
     quantity: number;
+    variant_id: number | null;
+    product_id: number | null;
   }[];
   customer: {
     first_name: string | null;
@@ -122,6 +124,7 @@ export function mapPedidoData(order: ShopifyOrder) {
       referencia: li.title || null,
       color: li.variant_title || null,
       cantidad: li.quantity || 1,
+      shopifyVariantId: li.variant_id ? String(li.variant_id) : null,
     })),
   };
 }

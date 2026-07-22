@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { BILLETERAS_FLETE } from "@/lib/billeterasFlete";
 import { ajustarIngresoPedido } from "@/lib/balance";
+import { ajustarStockPedido } from "@/lib/inventario";
 
 export async function GET() {
   try {
@@ -96,11 +97,12 @@ export async function POST(req: NextRequest) {
           cuentaFleteId: cuenta ? cuenta.id : null,
           productos: {
             create: (productos || [])
-              .filter((p: any) => p.color || p.referencia)
+              .filter((p: any) => p.color || p.referencia || p.productoId)
               .map((p: any) => ({
                 color: p.color || null,
                 referencia: p.referencia || null,
                 cantidad: p.cantidad ? Number(p.cantidad) : 1,
+                productoId: p.productoId || null,
               })),
           },
           fletes: {
@@ -130,6 +132,7 @@ export async function POST(req: NextRequest) {
       }
 
       await ajustarIngresoPedido(tx, null, nuevoPedido);
+      await ajustarStockPedido(tx, null, nuevoPedido);
 
       return nuevoPedido;
     });

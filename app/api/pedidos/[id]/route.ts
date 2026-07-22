@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { BILLETERAS_FLETE } from "@/lib/billeterasFlete";
 import { ajustarIngresoPedido } from "@/lib/balance";
+import { ajustarStockPedido } from "@/lib/inventario";
 
 export async function GET(
   _req: NextRequest,
@@ -47,25 +48,26 @@ export async function PATCH(
       }
     }
 
-    if (Array.isArray(productos)) {
-      await prisma.productoPedido.deleteMany({ where: { pedidoId: params.id } });
-      data.productos = {
-        create: productos
-          .filter((p: any) => p.color || p.referencia)
-          .map((p: any) => ({
-            color: p.color || null,
-            referencia: p.referencia || null,
-            cantidad: p.cantidad ? Number(p.cantidad) : 1,
-          })),
-      };
-    }
-
     const pedido = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const existente = await tx.pedido.findUnique({
         where: { id: params.id },
-        include: { fletes: true },
+        include: { fletes: true, productos: true },
       });
       if (!existente) throw new Error("Pedido no encontrado");
+
+      if (Array.isArray(productos)) {
+        await tx.productoPedido.deleteMany({ where: { pedidoId: params.id } });
+        data.productos = {
+          create: productos
+            .filter((p: any) => p.color || p.referencia || p.productoId)
+            .map((p: any) => ({
+              color: p.color || null,
+              referencia: p.referencia || null,
+              cantidad: p.cantidad ? Number(p.cantidad) : 1,
+              productoId: p.productoId || null,
+            })),
+        };
+      }
 
       const totalFleteAnterior = existente.fletes.reduce((s, f) => s + f.valor, 0);
       let totalFleteNuevo = totalFleteAnterior;
@@ -154,6 +156,7 @@ export async function PATCH(
       });
 
       await ajustarIngresoPedido(tx, existente, pedidoActualizado);
+      await ajustarStockPedido(tx, existente, pedidoActualizado);
 
       return pedidoActualizado;
     });
@@ -174,7 +177,7 @@ export async function DELETE(
     await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const pedido = await tx.pedido.findUnique({
         where: { id: params.id },
-        include: { fletes: true },
+        include: { fletes: true, productos: true },
       });
       if (!pedido) throw new Error("Pedido no encontrado");
 
@@ -199,6 +202,7 @@ export async function DELETE(
       }
 
       await ajustarIngresoPedido(tx, pedido, null);
+      await ajustarStockPedido(tx, pedido, null);
 
       await tx.pedido.delete({ where: { id: params.id } });
     });
