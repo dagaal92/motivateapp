@@ -2,11 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 
-export async function GET() {
+export const dynamic = "force-dynamic";
+
+export async function GET(req: NextRequest) {
   try {
+    const sinCategoria = req.nextUrl.searchParams.get("sinCategoria") === "1";
     const movimientos = await prisma.movimiento.findMany({
+      where: sinCategoria ? { categoria: null } : undefined,
       orderBy: { creadoEn: "desc" },
-      take: 30,
+      take: sinCategoria ? 500 : 30,
       include: { cuenta: { select: { nombre: true } } },
     });
     return NextResponse.json(movimientos);
@@ -22,9 +26,9 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { cuentaId, tipo, monto, descripcion } = body;
+    const { cuentaId, tipo, monto, descripcion, categoria } = body;
 
-    if (!cuentaId || !tipo || !monto) {
+    if (!cuentaId || !tipo || !monto || !categoria) {
       return NextResponse.json(
         { error: "Faltan campos obligatorios" },
         { status: 400 }
@@ -55,6 +59,7 @@ export async function POST(req: NextRequest) {
           tipo,
           monto: montoNum,
           descripcion: descripcion || null,
+          categoria,
         },
       });
 

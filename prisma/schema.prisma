@@ -36,9 +36,25 @@ model Movimiento {
   tipo        TipoMovimiento
   monto       Int
   descripcion String?
+  categoria   String?
   creadoEn    DateTime       @default(now())
 
   @@index([cuentaId])
+  @@index([categoria])
+}
+
+model Presupuesto {
+  id            String         @id @default(cuid())
+  categoria     String
+  tipo          TipoMovimiento
+  anio          Int
+  mes           Int
+  monto         Int            @default(0)
+  creadoEn      DateTime       @default(now())
+  actualizadoEn DateTime       @updatedAt
+
+  @@unique([categoria, tipo, anio, mes])
+  @@index([anio, mes])
 }
 
 model Pedido {

@@ -52,6 +52,7 @@ export async function ajustarIngresoPedido(
           cuentaId: cuenta.id,
           tipo: "EGRESO",
           monto: efectoAnterior.monto,
+          categoria: "Venta",
           descripcion: `Reversión venta pedido ${anterior!.numeroOrden || anterior!.telefono}`,
         },
       });
@@ -70,6 +71,7 @@ export async function ajustarIngresoPedido(
           cuentaId: cuenta.id,
           tipo: "INGRESO",
           monto: efectoNuevo.monto,
+          categoria: "Venta",
           descripcion: `Venta pedido ${nuevo!.numeroOrden || nuevo!.telefono}`,
         },
       });

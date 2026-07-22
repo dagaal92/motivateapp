@@ -112,6 +112,7 @@ export async function PATCH(
                 cuentaId: cuentaAnterior.id,
                 tipo: "INGRESO",
                 monto: totalFleteAnterior,
+                categoria: "Flete",
                 descripcion: `Reversión flete pedido ${existente.numeroOrden || existente.telefono} (actualizado)`,
               },
             });
@@ -137,6 +138,7 @@ export async function PATCH(
               cuentaId: cuentaNueva.id,
               tipo: "EGRESO",
               monto: totalFleteNuevo,
+              categoria: "Flete",
               descripcion: `Flete pedido ${existente.numeroOrden || existente.telefono} (actualizado)`,
             },
           });
@@ -189,6 +191,7 @@ export async function DELETE(
               cuentaId: cuenta.id,
               tipo: "INGRESO",
               monto: totalFlete,
+              categoria: "Flete",
               descripcion: `Reversión flete - pedido eliminado (${pedido.numeroOrden || pedido.telefono})`,
             },
           });

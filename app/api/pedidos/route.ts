@@ -123,6 +123,7 @@ export async function POST(req: NextRequest) {
             cuentaId: cuenta.id,
             tipo: "EGRESO",
             monto: totalFlete,
+            categoria: "Flete",
             descripcion: `Flete pedido ${nuevoPedido.numeroOrden || nuevoPedido.telefono}`,
           },
         });

@@ -22,7 +22,7 @@ const NAV_ITEMS = [
   { label: "Pedido", icon: ShoppingCart, href: "/", funcional: true },
   { label: "Balance", icon: Wallet, href: "/balance", funcional: true },
   { label: "Listados", icon: ListChecks, href: "/maestros", funcional: true },
-  { label: "Gastos", icon: DollarSign, href: "#", funcional: false },
+  { label: "Reportes", icon: DollarSign, href: "/reportes", funcional: true },
   { label: "Inventario", icon: Package, href: "#", funcional: false },
   { label: "Clientes", icon: Users, href: "#", funcional: false },
   { label: "Preparación pedidos", icon: ClipboardList, href: "#", funcional: false },

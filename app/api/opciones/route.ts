@@ -18,6 +18,16 @@ const SEED: Record<string, string[]> = {
   MUNICIPIO: [],
   COLOR: [],
   REFERENCIA: [],
+  CATEGORIA_GASTO: [
+    "Flete",
+    "Publicidad",
+    "Nómina",
+    "Insumos e inventario",
+    "Comisiones pasarela de pago",
+    "Arriendo y servicios",
+    "Otros gastos",
+  ],
+  CATEGORIA_INGRESO: ["Venta", "Otros ingresos"],
 };
 
 let seeded = false;

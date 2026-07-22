@@ -25,9 +25,12 @@ type Movimiento = {
   tipo: "INGRESO" | "EGRESO";
   monto: number;
   descripcion: string | null;
+  categoria: string | null;
   creadoEn: string;
   cuenta: { nombre: string };
 };
+
+type Opcion = { id: string; categoria: string; valor: string };
 
 const ICONO_CUENTA: Record<
   string,
@@ -101,35 +104,74 @@ export default function BalancePage() {
   const [formAbierto, setFormAbierto] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [logoFallido, setLogoFallido] = useState<Record<string, boolean>>({});
+  const [categoriasGasto, setCategoriasGasto] = useState<Opcion[]>([]);
+  const [categoriasIngreso, setCategoriasIngreso] = useState<Opcion[]>([]);
+  const [soloSinCategoria, setSoloSinCategoria] = useState(false);
 
   const [form, setForm] = useState({
     cuentaId: "",
     tipo: "INGRESO" as "INGRESO" | "EGRESO",
     monto: "",
     descripcion: "",
+    categoria: "",
   });
+
+  const cargarMovimientos = useCallback(async (sinCategoria: boolean) => {
+    const res = await fetch(
+      sinCategoria ? "/api/movimientos?sinCategoria=1" : "/api/movimientos"
+    );
+    if (!res.ok) throw new Error();
+    setMovimientos(await res.json());
+  }, []);
 
   const cargar = useCallback(async () => {
     setLoading(true);
     try {
-      const [resCuentas, resMovs] = await Promise.all([
+      const [resCuentas, resGasto, resIngreso] = await Promise.all([
         fetch("/api/cuentas"),
-        fetch("/api/movimientos"),
+        fetch("/api/opciones?categoria=CATEGORIA_GASTO"),
+        fetch("/api/opciones?categoria=CATEGORIA_INGRESO"),
       ]);
-      if (!resCuentas.ok || !resMovs.ok) throw new Error();
+      if (!resCuentas.ok || !resGasto.ok || !resIngreso.ok) throw new Error();
       setCuentas(await resCuentas.json());
-      setMovimientos(await resMovs.json());
+      setCategoriasGasto(await resGasto.json());
+      setCategoriasIngreso(await resIngreso.json());
+      await cargarMovimientos(soloSinCategoria);
       setError(null);
     } catch {
       setError("No se pudo cargar el balance. Revisa tu conexión a la base de datos.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [cargarMovimientos, soloSinCategoria]);
 
   useEffect(() => {
     cargar();
-  }, [cargar]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    cargarMovimientos(soloSinCategoria).catch(() => {});
+  }, [soloSinCategoria, cargarMovimientos]);
+
+  const opcionesCategoria = form.tipo === "EGRESO" ? categoriasGasto : categoriasIngreso;
+
+  const cambiarCategoriaMovimiento = async (id: string, categoria: string) => {
+    setMovimientos((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, categoria: categoria || null } : m))
+    );
+    try {
+      const res = await fetch(`/api/movimientos/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ categoria: categoria || null }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      alert("No se pudo actualizar la categoría");
+      cargarMovimientos(soloSinCategoria);
+    }
+  };
 
   const saldoDe = (nombre: string) =>
     cuentas.find((c) => c.nombre === nombre)?.saldo || 0;
@@ -143,7 +185,7 @@ export default function BalancePage() {
 
   const registrarMovimiento = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.cuentaId || !form.monto) return;
+    if (!form.cuentaId || !form.monto || !form.categoria) return;
     setEnviando(true);
     try {
       const res = await fetch("/api/movimientos", {
@@ -152,7 +194,7 @@ export default function BalancePage() {
         body: JSON.stringify(form),
       });
       if (!res.ok) throw new Error();
-      setForm({ cuentaId: "", tipo: "INGRESO", monto: "", descripcion: "" });
+      setForm({ cuentaId: "", tipo: "INGRESO", monto: "", descripcion: "", categoria: "" });
       setFormAbierto(false);
       await cargar();
     } catch {
@@ -218,7 +260,7 @@ export default function BalancePage() {
         {formAbierto && (
           <form
             onSubmit={registrarMovimiento}
-            className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-4 border-t border-borderLight pt-4"
+            className="grid grid-cols-1 md:grid-cols-5 gap-3 mt-4 border-t border-borderLight pt-4"
           >
             <div>
               <label className={labelCls}>Bolsillo</label>
@@ -241,12 +283,32 @@ export default function BalancePage() {
               <select
                 value={form.tipo}
                 onChange={(e) =>
-                  setForm((f) => ({ ...f, tipo: e.target.value as "INGRESO" | "EGRESO" }))
+                  setForm((f) => ({
+                    ...f,
+                    tipo: e.target.value as "INGRESO" | "EGRESO",
+                    categoria: "",
+                  }))
                 }
                 className={inputCls}
               >
                 <option value="INGRESO">Ingreso</option>
                 <option value="EGRESO">Egreso</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Categoría</label>
+              <select
+                required
+                value={form.categoria}
+                onChange={(e) => setForm((f) => ({ ...f, categoria: e.target.value }))}
+                className={inputCls}
+              >
+                <option value="">Selecciona...</option>
+                {opcionesCategoria.map((c) => (
+                  <option key={c.id} value={c.valor}>
+                    {c.valor}
+                  </option>
+                ))}
               </select>
             </div>
             <div>
@@ -270,7 +332,7 @@ export default function BalancePage() {
                 placeholder="Motivo del movimiento"
               />
             </div>
-            <div className="md:col-span-4">
+            <div className="md:col-span-5">
               <button
                 type="submit"
                 disabled={enviando}
@@ -341,11 +403,25 @@ export default function BalancePage() {
 
           {/* Movimientos recientes */}
           <div className="bg-card border border-borderLight rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-borderLight">
+            <div className="px-5 py-4 border-b border-borderLight flex items-center justify-between flex-wrap gap-2">
               <p className="text-sm font-semibold text-ink2">Movimientos recientes</p>
+              <button
+                onClick={() => setSoloSinCategoria((v) => !v)}
+                className={`text-xs font-medium px-3 py-1.5 rounded-md transition-colors ${
+                  soloSinCategoria
+                    ? "bg-accent text-white"
+                    : "bg-paper text-ink2 hover:bg-borderLight"
+                }`}
+              >
+                {soloSinCategoria ? "Viendo solo sin categorizar" : "Ver sin categorizar"}
+              </button>
             </div>
             {movimientos.length === 0 ? (
-              <p className="text-sm text-muted2 p-5">Aún no hay movimientos registrados.</p>
+              <p className="text-sm text-muted2 p-5">
+                {soloSinCategoria
+                  ? "No hay movimientos sin categorizar."
+                  : "Aún no hay movimientos registrados."}
+              </p>
             ) : (
               <table className="w-full text-sm">
                 <thead>
@@ -353,6 +429,7 @@ export default function BalancePage() {
                     <th className="px-5 py-3">Fecha</th>
                     <th className="px-5 py-3">Bolsillo</th>
                     <th className="px-5 py-3">Tipo</th>
+                    <th className="px-5 py-3">Categoría</th>
                     <th className="px-5 py-3">Descripción</th>
                     <th className="px-5 py-3 text-right">Valor</th>
                   </tr>
@@ -375,6 +452,26 @@ export default function BalancePage() {
                           )}
                           {m.tipo === "INGRESO" ? "Ingreso" : "Egreso"}
                         </span>
+                      </td>
+                      <td className="px-5 py-3">
+                        <select
+                          value={m.categoria || ""}
+                          onChange={(e) => cambiarCategoriaMovimiento(m.id, e.target.value)}
+                          className={`text-xs rounded-md px-2 py-1 border ${
+                            m.categoria
+                              ? "border-borderLight bg-white text-ink2"
+                              : "border-red/30 bg-redSoft text-red"
+                          }`}
+                        >
+                          <option value="">Sin categorizar</option>
+                          {(m.tipo === "EGRESO" ? categoriasGasto : categoriasIngreso).map(
+                            (c) => (
+                              <option key={c.id} value={c.valor}>
+                                {c.valor}
+                              </option>
+                            )
+                          )}
+                        </select>
                       </td>
                       <td className="px-5 py-3 text-muted2">
                         {m.descripcion || "—"}
