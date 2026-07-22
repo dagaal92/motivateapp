@@ -457,9 +457,9 @@ export default function BalancePage() {
                         <select
                           value={m.categoria || ""}
                           onChange={(e) => cambiarCategoriaMovimiento(m.id, e.target.value)}
-                          className={`text-xs rounded-md px-2 py-1 border ${
+                          className={`text-sm rounded-md px-3 py-2 border bg-white text-ink2 focus:outline-none focus:ring-1 focus:ring-accent ${
                             m.categoria
-                              ? "border-borderLight bg-white text-ink2"
+                              ? "border-borderLight"
                               : "border-red/30 bg-redSoft text-red"
                           }`}
                         >
