@@ -95,3 +95,44 @@ export function mapPedidoData(order: ShopifyOrder) {
     })),
   };
 }
+
+const PLACEHOLDERS: Record<string, string> = {
+  cliente: "Cliente Shopify",
+  telefono: "Sin teléfono",
+  direccion: "Sin dirección",
+  ciudad: "Sin ciudad",
+  municipio: "Sin ciudad",
+};
+
+const CAMPOS_PROTEGIDOS = [
+  "cliente",
+  "telefono",
+  "direccion",
+  "ciudad",
+  "municipio",
+  "departamento",
+] as const;
+
+function esVacio(campo: string, valor: unknown) {
+  if (!valor) return true;
+  return valor === PLACEHOLDERS[campo];
+}
+
+/**
+ * La API de Shopify a veces no trae datos de cliente/dirección por la
+ * restricción de "datos protegidos" del plan de la tienda. Si el pedido ya
+ * tiene un dato bueno guardado (por ejemplo, completado manualmente), no lo
+ * reemplazamos por el placeholder vacío que trae Shopify en una resincronización.
+ */
+export function sinDegradarDatosDeContacto<T extends Record<string, any>>(
+  existente: Record<string, any>,
+  pedidoData: T
+): T {
+  const resultado = { ...pedidoData };
+  for (const campo of CAMPOS_PROTEGIDOS) {
+    if (esVacio(campo, resultado[campo]) && !esVacio(campo, existente[campo])) {
+      delete resultado[campo];
+    }
+  }
+  return resultado;
+}

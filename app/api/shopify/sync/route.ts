@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { mapPedidoData, type ShopifyOrder } from "@/lib/shopify";
+import { mapPedidoData, sinDegradarDatosDeContacto, type ShopifyOrder } from "@/lib/shopify";
 import { ajustarIngresoPedido } from "@/lib/balance";
 
 export async function POST() {
@@ -47,11 +47,12 @@ export async function POST() {
       });
 
       if (existente) {
+        const dataSinDegradar = sinDegradarDatosDeContacto(existente, pedidoData);
         await prisma.$transaction(async (tx) => {
           await tx.productoPedido.deleteMany({ where: { pedidoId: existente.id } });
           const pedidoActualizado = await tx.pedido.update({
             where: { id: existente.id },
-            data: { ...pedidoData, productos: { create: productos } },
+            data: { ...dataSinDegradar, productos: { create: productos } },
           });
           await ajustarIngresoPedido(tx, existente, pedidoActualizado);
         });
