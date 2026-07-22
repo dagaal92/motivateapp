@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { CUENTAS_BASE } from "@/lib/cuentas";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     // Migra el nombre viejo "Envío" a "Envia" sin perder el saldo ya registrado
