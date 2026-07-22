@@ -173,7 +173,7 @@ export default function ClientesPage() {
   };
 
   return (
-    <main className="p-6 max-w-[1200px] mx-auto space-y-5">
+    <main className="p-4 sm:p-6 max-w-[1200px] mx-auto space-y-5">
       <div className="bg-card border border-borderLight rounded-xl p-5">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-lg bg-accentSoft text-accent flex items-center justify-center">
@@ -224,6 +224,7 @@ export default function ClientesPage() {
           {clientes.length === 0 ? (
             <p className="text-sm text-muted2 p-5">Aún no hay clientes.</p>
           ) : (
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-paper text-left text-xs font-semibold text-muted2 uppercase tracking-wide">
@@ -365,6 +366,7 @@ export default function ClientesPage() {
                           ) : (pedidosPorTelefono[c.telefono] || []).length === 0 ? (
                             <p className="text-sm text-muted2">Este cliente no tiene pedidos.</p>
                           ) : (
+                            <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                               <thead>
                                 <tr className="text-left text-xs font-semibold text-muted2 uppercase tracking-wide">
@@ -391,6 +393,7 @@ export default function ClientesPage() {
                                 ))}
                               </tbody>
                             </table>
+                            </div>
                           )}
                         </td>
                       </tr>
@@ -399,6 +402,7 @@ export default function ClientesPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
           <Pagination
             page={pagina}

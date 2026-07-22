@@ -69,7 +69,7 @@ export default function MaestrosPage() {
     "w-full bg-white border border-borderLight rounded-md px-3 py-2 text-sm text-ink2 placeholder:text-muted2 focus:outline-none focus:ring-1 focus:ring-accent";
 
   return (
-    <main className="p-6 max-w-[1000px] mx-auto space-y-5">
+    <main className="p-4 sm:p-6 max-w-[1000px] mx-auto space-y-5">
       <div className="bg-card border border-borderLight rounded-xl p-5">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-accentSoft text-accent flex items-center justify-center">

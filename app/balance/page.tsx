@@ -220,7 +220,7 @@ export default function BalancePage() {
   const labelCls = "text-xs font-medium text-muted2 mb-1 block";
 
   return (
-    <main className="p-6 max-w-[1400px] mx-auto space-y-5">
+    <main className="p-4 sm:p-6 max-w-[1400px] mx-auto space-y-5">
       {/* Encabezado */}
       <div className="bg-card border border-borderLight rounded-xl p-5">
         <div className="flex items-start justify-between flex-wrap gap-4">
@@ -365,7 +365,7 @@ export default function BalancePage() {
       ) : (
         <>
           {/* Bolsillos */}
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
             {cuentas.map((c) => {
               const meta = ICONO_CUENTA[c.nombre] || {
                 icon: Wallet,
@@ -434,6 +434,7 @@ export default function BalancePage() {
                   : "Aún no hay movimientos registrados."}
               </p>
             ) : (
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-paper text-left text-xs font-semibold text-muted2 uppercase tracking-wide">
@@ -495,6 +496,7 @@ export default function BalancePage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
             <Pagination
               page={pagina}

@@ -34,7 +34,7 @@ export default function RootLayout({
       <body
         className={`${display.variable} ${body.variable} ${mono.variable} font-body bg-paper text-ink2 min-h-screen`}
       >
-        <div className="flex">
+        <div className="flex flex-col md:flex-row">
           <Sidebar />
           <div className="flex-1 min-w-0">{children}</div>
         </div>
