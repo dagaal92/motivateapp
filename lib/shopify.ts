@@ -35,6 +35,32 @@ export type EstadoPedido =
   | "ENTREGADO"
   | "CANCELADO";
 
+// Shopify a veces manda el mismo lugar con distinta capitalización/tilde
+// según el checkout ("Bogota", "BogotÁ", "Bogotá, D.C."). Se normaliza a la
+// forma que ya usa el listado maestro para que los desplegables la reconozcan.
+const CORRECCIONES_CIUDAD: Record<string, string> = {
+  bogota: "Bogotá",
+  "bogotá": "Bogotá",
+  medellin: "Medellín",
+  "medellín": "Medellín",
+  "puerto colombia": "Puerto Colombia",
+};
+
+const CORRECCIONES_DEPARTAMENTO: Record<string, string> = {
+  "bogotá, d.c.": "Bogotá D.C.",
+  "bogota, d.c.": "Bogotá D.C.",
+};
+
+function normalizarTexto(
+  valor: string | null | undefined,
+  correcciones: Record<string, string>
+): string | null {
+  if (!valor) return null;
+  const limpio = valor.trim();
+  if (!limpio) return null;
+  return correcciones[limpio.toLowerCase()] || limpio;
+}
+
 export function mapEstado(order: ShopifyOrder): EstadoPedido {
   if (order.cancelled_at) return "CANCELADO";
   if (order.fulfillment_status === "fulfilled") return "ENTREGADO";
@@ -60,8 +86,12 @@ export function mapPedidoData(order: ShopifyOrder) {
       "Sin dirección"
     : "Sin dirección";
 
-  const ciudad = order.shipping_address?.city || "Sin ciudad";
-  const departamento = order.shipping_address?.province || null;
+  const ciudad =
+    normalizarTexto(order.shipping_address?.city, CORRECCIONES_CIUDAD) || "Sin ciudad";
+  const departamento = normalizarTexto(
+    order.shipping_address?.province,
+    CORRECCIONES_DEPARTAMENTO
+  );
 
   const cantidad =
     order.line_items.reduce((sum, li) => sum + li.quantity, 0) || 1;

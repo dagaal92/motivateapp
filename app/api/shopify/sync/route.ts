@@ -38,9 +38,14 @@ export async function POST() {
 
     let creados = 0;
     let actualizados = 0;
+    const municipiosVistos = new Set<string>();
 
     for (const order of data.orders) {
       const { productos, ...pedidoData } = mapPedidoData(order);
+
+      if (pedidoData.municipio && pedidoData.municipio !== "Sin ciudad" && !/^\d+$/.test(pedidoData.municipio)) {
+        municipiosVistos.add(pedidoData.municipio);
+      }
 
       const existente = await prisma.pedido.findUnique({
         where: { shopifyOrderId: pedidoData.shopifyOrderId },
@@ -63,6 +68,16 @@ export async function POST() {
         });
         creados++;
       }
+    }
+
+    if (municipiosVistos.size > 0) {
+      await prisma.opcionMaestra.createMany({
+        data: Array.from(municipiosVistos).map((valor) => ({
+          categoria: "MUNICIPIO",
+          valor,
+        })),
+        skipDuplicates: true,
+      });
     }
 
     return NextResponse.json({ creados, actualizados, total: data.orders.length });
