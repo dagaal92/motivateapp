@@ -410,10 +410,12 @@ export default function PedidoForm({ pedidoId }: { pedidoId?: string }) {
           ) : (
             <div className="space-y-3">
               {productos.map((p, i) => {
-                const productoActual = p.productoId
-                  ? productosCatalogo.find((pc) => pc.id === p.productoId)
-                  : undefined;
-                const nombreActual = productoActual?.nombre || "";
+                // Se deriva de `referencia` (no de productoId): al elegir el
+                // producto, productoId queda en null hasta que se elige la
+                // variante, así que no puede ser la fuente de este valor.
+                const nombreActual = nombresCatalogo.includes(p.referencia)
+                  ? p.referencia
+                  : "";
                 const variantesDisponibles = nombreActual
                   ? catalogoPorNombre.get(nombreActual) || []
                   : [];
