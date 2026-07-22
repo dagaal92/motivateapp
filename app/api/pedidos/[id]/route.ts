@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { BILLETERAS_FLETE } from "@/lib/billeterasFlete";
+import { ajustarIngresoPedido } from "@/lib/balance";
 
 export async function GET(
   _req: NextRequest,
@@ -144,11 +145,15 @@ export async function PATCH(
         data.cuentaFleteId = cuentaFleteIdNueva;
       }
 
-      return tx.pedido.update({
+      const pedidoActualizado = await tx.pedido.update({
         where: { id: params.id },
         data,
         include: { productos: true, fletes: true },
       });
+
+      await ajustarIngresoPedido(tx, existente, pedidoActualizado);
+
+      return pedidoActualizado;
     });
 
     return NextResponse.json(pedido);
@@ -189,6 +194,8 @@ export async function DELETE(
           });
         }
       }
+
+      await ajustarIngresoPedido(tx, pedido, null);
 
       await tx.pedido.delete({ where: { id: params.id } });
     });

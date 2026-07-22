@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { mapPedidoData, type ShopifyOrder } from "@/lib/shopify";
+import { ajustarIngresoPedido } from "@/lib/balance";
 
 export async function POST() {
   const domain = process.env.SHOPIFY_STORE_DOMAIN;
@@ -46,10 +47,13 @@ export async function POST() {
       });
 
       if (existente) {
-        await prisma.productoPedido.deleteMany({ where: { pedidoId: existente.id } });
-        await prisma.pedido.update({
-          where: { id: existente.id },
-          data: { ...pedidoData, productos: { create: productos } },
+        await prisma.$transaction(async (tx) => {
+          await tx.productoPedido.deleteMany({ where: { pedidoId: existente.id } });
+          const pedidoActualizado = await tx.pedido.update({
+            where: { id: existente.id },
+            data: { ...pedidoData, productos: { create: productos } },
+          });
+          await ajustarIngresoPedido(tx, existente, pedidoActualizado);
         });
         actualizados++;
       } else {

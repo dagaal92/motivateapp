@@ -1,15 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-
-const CUENTAS_BASE = [
-  "Bancolombia",
-  "Nequi",
-  "Daviplata",
-  "Mercado Pago",
-  "Dropi",
-  "Envia",
-  "Lulo",
-];
+import { CUENTAS_BASE } from "@/lib/cuentas";
 
 export async function GET() {
   try {

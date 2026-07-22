@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { BILLETERAS_FLETE } from "@/lib/billeterasFlete";
+import { ajustarIngresoPedido } from "@/lib/balance";
 
 export async function GET() {
   try {
@@ -126,6 +127,8 @@ export async function POST(req: NextRequest) {
           },
         });
       }
+
+      await ajustarIngresoPedido(tx, null, nuevoPedido);
 
       return nuevoPedido;
     });
