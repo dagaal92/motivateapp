@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { COOKIE_SESION } from "@/lib/auth";
 
 // El webhook de Shopify lo llama Shopify directamente (no un navegador con
-// contraseña) y ya se autentica solo, verificando la firma HMAC en
+// sesión) y ya se autentica solo, verificando la firma HMAC en
 // app/api/shopify/webhook/route.ts. Por eso queda fuera de esta contraseña.
-const RUTAS_PUBLICAS = ["/api/shopify/webhook"];
+const RUTAS_PUBLICAS = ["/api/shopify/webhook", "/login", "/api/login", "/icon.svg"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  if (RUTAS_PUBLICAS.some((ruta) => pathname.startsWith(ruta))) {
+  if (RUTAS_PUBLICAS.some((ruta) => pathname === ruta || pathname.startsWith(ruta))) {
     return NextResponse.next();
   }
 
@@ -18,23 +19,21 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const auth = request.headers.get("authorization");
-  if (auth?.startsWith("Basic ")) {
-    try {
-      const decoded = atob(auth.slice("Basic ".length));
-      const suppliedPassword = decoded.slice(decoded.indexOf(":") + 1);
-      if (suppliedPassword === password) {
-        return NextResponse.next();
-      }
-    } catch {
-      // credenciales mal formadas, cae al 401 de abajo
-    }
+  const sesion = request.cookies.get(COOKIE_SESION)?.value;
+  if (sesion === password) {
+    return NextResponse.next();
   }
 
-  return new NextResponse("Autenticación requerida", {
-    status: 401,
-    headers: { "WWW-Authenticate": 'Basic realm="Motívate"' },
-  });
+  // Las rutas de API no pueden recibir un redirect (el fetch del cliente
+  // espera JSON), así que devuelven 401 en vez de mandar a /login.
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+  }
+
+  const loginUrl = request.nextUrl.clone();
+  loginUrl.pathname = "/login";
+  loginUrl.searchParams.set("next", pathname);
+  return NextResponse.redirect(loginUrl);
 }
 
 export const config = {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -18,6 +18,7 @@ import {
   Menu,
   X,
 } from "lucide-react";
+import Logo, { LogoMark } from "@/components/Logo";
 
 const NAV_ITEMS = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard", funcional: true },
@@ -33,18 +34,32 @@ const NAV_ITEMS = [
 export default function Sidebar() {
   const [colapsado, setColapsado] = useState(false);
   const [abiertoMobile, setAbiertoMobile] = useState(false);
+  const [saliendo, setSaliendo] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
 
   // Cerrar el menú al cambiar de página en celular
   useEffect(() => {
     setAbiertoMobile(false);
   }, [pathname]);
 
+  // La pantalla de login no lleva menú alrededor.
+  if (pathname === "/login") return null;
+
+  const salir = async () => {
+    setSaliendo(true);
+    try {
+      await fetch("/api/logout", { method: "POST" });
+    } finally {
+      router.push("/login");
+      router.refresh();
+    }
+  };
+
   return (
     <>
       {/* Barra superior en celular */}
-      <div className="md:hidden sticky top-0 z-30 w-full flex items-center justify-between bg-card border-b border-borderLight px-4 h-14">
-        <span className="font-display font-semibold text-ink2">Motívate</span>
+      <div className="md:hidden sticky top-0 z-30 w-full grid grid-cols-[auto_1fr_auto] items-center gap-2 bg-card border-b border-borderLight px-3 h-14">
         <button
           onClick={() => setAbiertoMobile(true)}
           className="w-9 h-9 flex items-center justify-center rounded-md text-ink2 hover:bg-paper transition-colors"
@@ -52,6 +67,10 @@ export default function Sidebar() {
         >
           <Menu size={20} />
         </button>
+        <div className="flex justify-center">
+          <Logo compact />
+        </div>
+        <div className="w-9 h-9" />
       </div>
 
       {/* Fondo oscuro detrás del menú en celular */}
@@ -71,7 +90,7 @@ export default function Sidebar() {
       >
         {/* Cerrar (solo celular) */}
         <div className="w-full flex md:hidden justify-between items-center px-4 py-3 border-b border-borderLight">
-          <span className="font-display font-semibold text-ink2">Motívate</span>
+          <Logo compact />
           <button
             onClick={() => setAbiertoMobile(false)}
             className="w-9 h-9 flex items-center justify-center rounded-md text-muted2 hover:bg-paper hover:text-ink2 transition-colors"
@@ -81,8 +100,16 @@ export default function Sidebar() {
           </button>
         </div>
 
+        {/* Logo (solo escritorio, expandido) */}
+        {!colapsado && (
+          <div className="w-full hidden md:flex items-center px-4 py-3 border-b border-borderLight">
+            <Logo compact />
+          </div>
+        )}
+
         {/* Botón de colapsar (solo escritorio) */}
-        <div className="w-full hidden md:flex justify-center py-3 border-b border-borderLight">
+        <div className="w-full hidden md:flex flex-col items-center gap-2 py-3 border-b border-borderLight">
+          {colapsado && <LogoMark size={26} />}
           <button
             onClick={() => setColapsado((c) => !c)}
             className="w-10 h-10 flex items-center justify-center rounded-md text-muted2 hover:bg-paper hover:text-ink2 transition-colors"
@@ -129,15 +156,19 @@ export default function Sidebar() {
 
         {/* Salir */}
         <div className="w-full flex justify-center py-3 border-t border-borderLight">
-          <span
+          <button
+            onClick={salir}
+            disabled={saliendo}
             title="Salir"
             className={`${
               colapsado ? "md:w-10 md:h-10 md:justify-center" : "md:w-56"
-            } w-56 px-3 gap-3 h-10 flex items-center rounded-md text-sm text-red font-medium cursor-default`}
+            } w-56 px-3 gap-3 h-10 flex items-center rounded-md text-sm text-red font-medium hover:bg-redSoft transition-colors disabled:opacity-50`}
           >
             <LogOut size={17} className="shrink-0" />
-            <span className={colapsado ? "md:hidden" : ""}>Salir</span>
-          </span>
+            <span className={colapsado ? "md:hidden" : ""}>
+              {saliendo ? "Saliendo…" : "Salir"}
+            </span>
+          </button>
         </div>
       </aside>
     </>
