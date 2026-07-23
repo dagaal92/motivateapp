@@ -22,7 +22,8 @@ type EstadoPedido =
   | "CONFIRMADO"
   | "EN_CAMINO"
   | "ENTREGADO"
-  | "CANCELADO";
+  | "CANCELADO"
+  | "DEVUELTO";
 
 type Pedido = {
   id: string;
@@ -49,6 +50,7 @@ const ESTADOS: EstadoPedido[] = [
   "EN_CAMINO",
   "ENTREGADO",
   "CANCELADO",
+  "DEVUELTO",
 ];
 
 const ESTADO_LABEL: Record<EstadoPedido, string> = {
@@ -57,6 +59,7 @@ const ESTADO_LABEL: Record<EstadoPedido, string> = {
   EN_CAMINO: "En camino",
   ENTREGADO: "Entregado",
   CANCELADO: "Cancelado",
+  DEVUELTO: "Devuelto",
 };
 
 const ESTADO_PILL: Record<EstadoPedido, string> = {
@@ -65,6 +68,7 @@ const ESTADO_PILL: Record<EstadoPedido, string> = {
   EN_CAMINO: "bg-amberSoft text-amber2",
   ENTREGADO: "bg-greenSoft text-green",
   CANCELADO: "bg-redSoft text-red",
+  DEVUELTO: "bg-orangeSoft text-orange",
 };
 
 const fmtMoney = (n: number) =>

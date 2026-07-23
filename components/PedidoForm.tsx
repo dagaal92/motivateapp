@@ -19,13 +19,14 @@ type ProductoLinea = {
 };
 type FleteLinea = { valor: string; observacion: string };
 
-const ESTADOS = ["PENDIENTE", "CONFIRMADO", "EN_CAMINO", "ENTREGADO", "CANCELADO"];
+const ESTADOS = ["PENDIENTE", "CONFIRMADO", "EN_CAMINO", "ENTREGADO", "CANCELADO", "DEVUELTO"];
 const ESTADO_LABEL: Record<string, string> = {
   PENDIENTE: "Pendiente",
   CONFIRMADO: "Confirmado",
   EN_CAMINO: "En camino",
   ENTREGADO: "Entregado",
   CANCELADO: "Cancelado",
+  DEVUELTO: "Devuelto",
 };
 
 const fmt = (n: number) =>
