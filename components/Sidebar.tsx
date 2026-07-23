@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 
 const NAV_ITEMS = [
-  { label: "Dashboard", icon: LayoutDashboard, href: "#", funcional: false },
+  { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard", funcional: true },
   { label: "Pedido", icon: ShoppingCart, href: "/", funcional: true },
   { label: "Balance", icon: Wallet, href: "/balance", funcional: true },
   { label: "Listados", icon: ListChecks, href: "/maestros", funcional: true },
