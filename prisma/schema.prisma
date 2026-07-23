@@ -83,6 +83,9 @@ model Pedido {
   cuentaFleteId  String?
   cuentaFlete    Cuenta?      @relation("PedidoCuentaFlete", fields: [cuentaFleteId], references: [id])
 
+  completadoEn   DateTime?
+  impreso        Boolean      @default(false)
+
   notas          String?
   creadoEn       DateTime     @default(now())
   actualizadoEn  DateTime     @updatedAt
@@ -93,6 +96,8 @@ model Pedido {
   @@index([estado])
   @@index([creadoEn])
   @@index([cuentaFleteId])
+  @@index([general])
+  @@index([completadoEn])
 }
 
 model ProductoPedido {
