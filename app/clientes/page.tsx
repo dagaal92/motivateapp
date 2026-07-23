@@ -55,6 +55,7 @@ const ESTADO_LABEL: Record<string, string> = {
   EN_CAMINO: "En camino",
   ENTREGADO: "Entregado",
   CANCELADO: "Cancelado",
+  DEVUELTO: "Devuelto",
 };
 
 type Resumen = {

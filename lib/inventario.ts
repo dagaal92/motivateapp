@@ -4,7 +4,7 @@ type LineaProducto = { productoId: string | null; cantidad: number };
 type EstadoStock = { estado: string; productos: LineaProducto[] };
 
 function cantidadEfectiva(linea: LineaProducto, estado: string): number {
-  return estado === "CANCELADO" ? 0 : linea.cantidad;
+  return estado === "CANCELADO" || estado === "DEVUELTO" ? 0 : linea.cantidad;
 }
 
 function netoPorProducto(pedido: EstadoStock | null): Map<string, number> {
@@ -22,7 +22,8 @@ function netoPorProducto(pedido: EstadoStock | null): Map<string, number> {
 
 /**
  * Descuenta/repone Producto.stock comparando el estado anterior y nuevo de
- * un pedido. Un pedido Cancelado cuenta como cantidad 0 (repone el stock).
+ * un pedido. Un pedido Cancelado o Devuelto cuenta como cantidad 0 (repone
+ * el stock) — la diferencia entre ambos es solo de reporte, no de stock.
  * Líneas sin productoId resuelto (texto libre o catálogo no importado) se
  * ignoran, no afectan el stock.
  *
