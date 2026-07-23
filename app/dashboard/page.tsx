@@ -12,6 +12,7 @@ import {
   Clock,
   Truck,
 } from "lucide-react";
+import PedidosPorMesChart from "@/components/PedidosPorMesChart";
 
 type Datos = {
   anio: number;
@@ -23,6 +24,8 @@ type Datos = {
   pedidosPendientes: number;
   totalFletes: number;
 };
+
+type PuntoMes = { mes: number; totalPedidos: number };
 
 const MESES = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -45,6 +48,8 @@ export default function DashboardPage() {
   const [datos, setDatos] = useState<Datos | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [serie, setSerie] = useState<PuntoMes[] | null>(null);
+  const [serieError, setSerieError] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -62,9 +67,25 @@ export default function DashboardPage() {
     }
   }, [anio, mes]);
 
+  const cargarSerie = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/dashboard/serie?anio=${anio}`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setSerie(data.meses);
+      setSerieError(null);
+    } catch {
+      setSerieError("No se pudo cargar el gráfico mensual.");
+    }
+  }, [anio]);
+
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  useEffect(() => {
+    cargarSerie();
+  }, [cargarSerie]);
 
   const cambiarMes = (delta: number) => {
     if (mes === null) return;
@@ -239,6 +260,11 @@ export default function DashboardPage() {
           </div>
         )
       )}
+
+      {serieError && (
+        <div className="bg-redSoft text-red text-sm p-4 rounded-md">{serieError}</div>
+      )}
+      {serie && <PedidosPorMesChart datos={serie} mesSeleccionado={mes} />}
     </main>
   );
 }
