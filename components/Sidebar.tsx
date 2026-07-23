@@ -27,7 +27,7 @@ const NAV_ITEMS = [
   { label: "Reportes", icon: DollarSign, href: "/reportes", funcional: true },
   { label: "Inventario", icon: Package, href: "/inventario", funcional: true },
   { label: "Clientes", icon: Users, href: "/clientes", funcional: true },
-  { label: "Preparación pedidos", icon: ClipboardList, href: "#", funcional: false },
+  { label: "Preparación pedidos", icon: ClipboardList, href: "/preparacion", funcional: true },
 ];
 
 export default function Sidebar() {
