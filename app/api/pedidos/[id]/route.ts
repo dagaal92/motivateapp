@@ -5,6 +5,7 @@ import { BILLETERAS_FLETE } from "@/lib/billeterasFlete";
 import { ajustarIngresoPedido } from "@/lib/balance";
 import { ajustarStockPedido } from "@/lib/inventario";
 import { upsertClienteDesdePedido } from "@/lib/clientes";
+import { normalizarNombre, normalizarTelefono } from "@/lib/normalizar";
 
 export async function GET(
   _req: NextRequest,
@@ -44,6 +45,12 @@ export async function PATCH(
         data[key] = value === "" || value === null ? 0 : Number(value);
       } else if (key === "cantidad") {
         data[key] = value === "" || value === null ? null : Number(value);
+      } else if (key === "telefono") {
+        const limpio = normalizarTelefono(value as string);
+        if (!limpio) throw new Error("El teléfono no tiene dígitos válidos");
+        data[key] = limpio;
+      } else if (key === "cliente") {
+        data[key] = normalizarNombre(value as string);
       } else {
         data[key] = value === "" ? null : value;
       }

@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { normalizarTelefono } from "@/lib/normalizar";
 
 const PLACEHOLDERS_CLIENTE = new Set(["Cliente Shopify"]);
 const PLACEHOLDERS_UBICACION = new Set(["Sin ciudad"]);
@@ -25,7 +26,7 @@ export async function upsertClienteDesdePedido(
   tx: Prisma.TransactionClient,
   datos: DatosPedidoParaCliente
 ) {
-  const telefono = datos.telefono?.trim();
+  const telefono = normalizarTelefono(datos.telefono) || datos.telefono?.trim();
   if (!telefono || telefono === "Sin teléfono") return;
 
   const existente = await tx.cliente.findUnique({ where: { telefono } });

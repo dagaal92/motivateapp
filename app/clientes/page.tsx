@@ -1,7 +1,17 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useState } from "react";
-import { Users, Pencil, Trash2, Plus, Minus, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import {
+  Users,
+  Pencil,
+  Trash2,
+  Plus,
+  Minus,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+  Sparkles,
+} from "lucide-react";
 import Pagination from "@/components/Pagination";
 
 const PAGE_SIZE = 25;
@@ -69,6 +79,8 @@ export default function ClientesPage() {
   const [editando, setEditando] = useState<string | null>(null);
   const [formEdicion, setFormEdicion] = useState({ nombre: "", email: "", ciudad: "", departamento: "" });
   const [guardando, setGuardando] = useState(false);
+  const [normalizando, setNormalizando] = useState(false);
+  const [mensajeNormalizar, setMensajeNormalizar] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -172,20 +184,60 @@ export default function ClientesPage() {
     }
   };
 
+  const normalizarDatos = async () => {
+    if (
+      !confirm(
+        "Esto va a quitar el +57, espacios y caracteres especiales de todos los teléfonos y nombres ya guardados (clientes y pedidos), y a fusionar fichas de cliente duplicadas por el mismo número. ¿Continuar?"
+      )
+    )
+      return;
+    setNormalizando(true);
+    setMensajeNormalizar(null);
+    try {
+      const res = await fetch("/api/clientes/normalizar", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error al normalizar");
+      setMensajeNormalizar(
+        `Listo: ${data.pedidosActualizados} pedidos y ${data.clientesActualizados} clientes actualizados, ${data.duplicadosFusionados} fichas duplicadas fusionadas.`
+      );
+      await cargar();
+    } catch (err) {
+      setMensajeNormalizar(
+        err instanceof Error ? err.message : "No se pudo normalizar la información"
+      );
+    } finally {
+      setNormalizando(false);
+    }
+  };
+
   return (
     <main className="p-4 sm:p-6 max-w-[1200px] mx-auto space-y-5">
       <div className="bg-card border border-borderLight rounded-xl p-5">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-lg bg-accentSoft text-accent flex items-center justify-center">
-            <Users size={20} />
+        <div className="flex items-start justify-between flex-wrap gap-4">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-lg bg-accentSoft text-accent flex items-center justify-center">
+              <Users size={20} />
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold text-ink2">Clientes</h1>
+              <p className="text-sm text-muted2">
+                Se crean solos a partir de tus pedidos, buscados por número de celular
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-semibold text-ink2">Clientes</h1>
-            <p className="text-sm text-muted2">
-              Se crean solos a partir de tus pedidos, buscados por número de celular
-            </p>
-          </div>
+          <button
+            onClick={normalizarDatos}
+            disabled={normalizando}
+            className="flex items-center gap-2 border border-borderLight text-ink2 text-sm font-medium px-4 py-2 rounded-md hover:bg-paper transition-colors disabled:opacity-50"
+          >
+            <Sparkles size={15} />
+            {normalizando ? "Normalizando…" : "Normalizar teléfonos y nombres"}
+          </button>
         </div>
+
+        {mensajeNormalizar && (
+          <p className="text-sm text-muted2 mt-3">{mensajeNormalizar}</p>
+        )}
 
         {resumen && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
