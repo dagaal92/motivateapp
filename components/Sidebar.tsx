@@ -17,6 +17,7 @@ import {
   ListChecks,
   Menu,
   X,
+  Landmark,
 } from "lucide-react";
 import Logo, { LogoMark } from "@/components/Logo";
 
@@ -24,6 +25,7 @@ const NAV_ITEMS = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard", funcional: true },
   { label: "Pedido", icon: ShoppingCart, href: "/", funcional: true },
   { label: "Balance", icon: Wallet, href: "/balance", funcional: true },
+  { label: "Deudas", icon: Landmark, href: "/deudas", funcional: true },
   { label: "Listados", icon: ListChecks, href: "/maestros", funcional: true },
   { label: "Reportes", icon: DollarSign, href: "/reportes", funcional: true },
   { label: "Inventario", icon: Package, href: "/inventario", funcional: true },

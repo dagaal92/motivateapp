@@ -21,6 +21,11 @@ enum TipoMovimiento {
   EGRESO
 }
 
+enum EstadoDeuda {
+  ACTIVA
+  PAGADA
+}
+
 model Cuenta {
   id           String       @id @default(cuid())
   nombre       String       @unique
@@ -28,6 +33,8 @@ model Cuenta {
   creadoEn     DateTime     @default(now())
   movimientos  Movimiento[]
   pedidosFlete Pedido[]     @relation("PedidoCuentaFlete")
+  deudas       Deuda[]
+  pagosDeuda   PagoDeuda[]
 }
 
 model Movimiento {
@@ -39,9 +46,45 @@ model Movimiento {
   descripcion String?
   categoria   String?
   creadoEn    DateTime       @default(now())
+  pagoDeuda   PagoDeuda?
 
   @@index([cuentaId])
   @@index([categoria])
+}
+
+model Deuda {
+  id             String      @id @default(cuid())
+  nombre         String
+  entidad        String?
+  montoTotal     Int
+  saldoPendiente Int
+  cuotaMensual   Int?
+  diaPago        Int
+  cuentaId       String?
+  cuenta         Cuenta?     @relation(fields: [cuentaId], references: [id])
+  estado         EstadoDeuda @default(ACTIVA)
+  notas          String?
+  creadoEn       DateTime    @default(now())
+  actualizadoEn  DateTime    @updatedAt
+  pagos          PagoDeuda[]
+
+  @@index([estado])
+  @@index([cuentaId])
+}
+
+model PagoDeuda {
+  id           String      @id @default(cuid())
+  deudaId      String
+  deuda        Deuda       @relation(fields: [deudaId], references: [id], onDelete: Cascade)
+  cuentaId     String
+  cuenta       Cuenta      @relation(fields: [cuentaId], references: [id])
+  movimientoId String?     @unique
+  movimiento   Movimiento? @relation(fields: [movimientoId], references: [id])
+  monto        Int
+  fecha        DateTime    @default(now())
+
+  @@index([deudaId])
+  @@index([cuentaId])
 }
 
 model Presupuesto {
