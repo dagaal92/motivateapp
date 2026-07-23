@@ -1,3 +1,5 @@
+import { normalizarNombre, normalizarTelefono } from "@/lib/normalizar";
+
 export type ShopifyOrder = {
   id: number;
   name: string;
@@ -73,15 +75,14 @@ export function mapEstado(order: ShopifyOrder): EstadoPedido {
 
 export function mapPedidoData(order: ShopifyOrder) {
   const cliente =
-    `${order.customer?.first_name ?? ""} ${order.customer?.last_name ?? ""}`.trim() ||
-    order.shipping_address?.name ||
-    "Cliente Shopify";
+    normalizarNombre(
+      `${order.customer?.first_name ?? ""} ${order.customer?.last_name ?? ""}`.trim() ||
+        order.shipping_address?.name
+    ) || "Cliente Shopify";
 
-  const telefono =
-    order.shipping_address?.phone ||
-    order.customer?.phone ||
-    order.phone ||
-    "Sin teléfono";
+  const telefonoCrudo =
+    order.shipping_address?.phone || order.customer?.phone || order.phone || null;
+  const telefono = normalizarTelefono(telefonoCrudo) || "Sin teléfono";
 
   const direccion = order.shipping_address
     ? `${order.shipping_address.address1 ?? ""} ${order.shipping_address.address2 ?? ""}`.trim() ||

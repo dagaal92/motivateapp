@@ -5,6 +5,7 @@ import { BILLETERAS_FLETE } from "@/lib/billeterasFlete";
 import { ajustarIngresoPedido } from "@/lib/balance";
 import { ajustarStockPedido } from "@/lib/inventario";
 import { upsertClienteDesdePedido } from "@/lib/clientes";
+import { normalizarNombre, normalizarTelefono } from "@/lib/normalizar";
 
 export async function GET(req: NextRequest) {
   try {
@@ -55,6 +56,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const telefonoLimpio = normalizarTelefono(telefono);
+    if (!telefonoLimpio) {
+      return NextResponse.json(
+        { error: "El teléfono no tiene dígitos válidos" },
+        { status: 400 }
+      );
+    }
+    const clienteLimpio = normalizarNombre(cliente);
+
     const fletesValidos = (fletes || []).filter((f: any) => f.valor);
     const totalFlete = fletesValidos.reduce(
       (sum: number, f: any) => sum + Number(f.valor),
@@ -82,8 +92,8 @@ export async function POST(req: NextRequest) {
       const nuevoPedido = await tx.pedido.create({
         data: {
           numeroOrden: numeroOrden || null,
-          cliente: cliente || null,
-          telefono,
+          cliente: clienteLimpio,
+          telefono: telefonoLimpio,
           direccion: direccion || null,
           ciudad: ciudad || null,
           valorTotal: valorTotal ? Number(valorTotal) : 0,

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { normalizarNombre } from "@/lib/normalizar";
 
 export async function PATCH(
   req: NextRequest,
@@ -10,7 +11,7 @@ export async function PATCH(
     const { nombre, email, ciudad, departamento } = body;
 
     const data: Record<string, unknown> = {};
-    if (nombre !== undefined) data.nombre = nombre || null;
+    if (nombre !== undefined) data.nombre = normalizarNombre(nombre);
     if (email !== undefined) data.email = email || null;
     if (ciudad !== undefined) data.ciudad = ciudad || null;
     if (departamento !== undefined) data.departamento = departamento || null;
