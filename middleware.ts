@@ -4,7 +4,15 @@ import { COOKIE_SESION } from "@/lib/auth";
 // El webhook de Shopify lo llama Shopify directamente (no un navegador con
 // sesión) y ya se autentica solo, verificando la firma HMAC en
 // app/api/shopify/webhook/route.ts. Por eso queda fuera de esta contraseña.
-const RUTAS_PUBLICAS = ["/api/shopify/webhook", "/login", "/api/login", "/icon.svg"];
+const RUTAS_PUBLICAS = [
+  "/api/shopify/webhook",
+  "/login",
+  "/api/login",
+  "/icon.png",
+  "/logo-full.png",
+  "/logo-wordmark.png",
+  "/logo-mark.png",
+];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

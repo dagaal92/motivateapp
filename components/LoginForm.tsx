@@ -39,7 +39,7 @@ export default function LoginForm() {
     <main className="min-h-screen flex items-center justify-center bg-paper p-4">
       <div className="w-full max-w-sm">
         <div className="flex justify-center mb-6">
-          <Logo />
+          <Logo withTagline />
         </div>
 
         <div className="bg-card border border-borderLight rounded-xl p-6 sm:p-7 shadow-sm">
@@ -94,7 +94,7 @@ export default function LoginForm() {
         </div>
 
         <p className="text-center text-xs text-muted2 mt-5">
-          Gestión de pedidos Motívate
+          Gestión de pedidos
         </p>
       </div>
     </main>
