@@ -15,6 +15,7 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
+  Hash,
 } from "lucide-react";
 
 type EstadoPedido =
@@ -91,6 +92,14 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [sincronizando, setSincronizando] = useState(false);
   const [mensajeSync, setMensajeSync] = useState<string | null>(null);
+  const [trayendoGuias, setTrayendoGuias] = useState(false);
+  const [reporteGuias, setReporteGuias] = useState<{
+    actualizados: number;
+    vacios: { numeroOrden: string | null; cliente: string | null }[];
+    raros: { numeroOrden: string | null; cliente: string | null; valor: string }[];
+    pendientesShopify: number;
+    manualesVacios: number;
+  } | null>(null);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
 
@@ -144,6 +153,27 @@ export default function Home() {
       );
     } finally {
       setSincronizando(false);
+    }
+  };
+
+  const traerGuias = async () => {
+    setTrayendoGuias(true);
+    try {
+      const res = await fetch("/api/shopify/numeros-guia?limite=25", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error al traer números de guía");
+      setReporteGuias((prev) => ({
+        actualizados: (prev?.actualizados || 0) + data.actualizados,
+        vacios: [...(prev?.vacios || []), ...data.vacios],
+        raros: [...(prev?.raros || []), ...data.raros],
+        pendientesShopify: data.pendientesShopify,
+        manualesVacios: data.manualesVacios,
+      }));
+      if (data.actualizados > 0) await cargar();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "No se pudo traer los números de guía");
+    } finally {
+      setTrayendoGuias(false);
     }
   };
 
@@ -300,9 +330,85 @@ export default function Home() {
             <RefreshCw size={15} className={sincronizando ? "animate-spin" : ""} />
             {sincronizando ? "Sincronizando…" : "Sincronizar Completo"}
           </button>
+          <button
+            onClick={traerGuias}
+            disabled={trayendoGuias}
+            className="flex items-center gap-2 border border-borderLight text-ink2 text-sm font-medium px-3 py-2 rounded-md hover:bg-paper transition-colors disabled:opacity-50"
+          >
+            <Hash size={15} className={trayendoGuias ? "animate-pulse" : ""} />
+            {trayendoGuias
+              ? "Trayendo guías…"
+              : reporteGuias
+              ? "Seguir trayendo guías"
+              : "Traer números de guía"}
+          </button>
         </div>
         {mensajeSync && (
           <p className="text-xs text-muted2 mt-3">{mensajeSync}</p>
+        )}
+
+        {reporteGuias && (
+          <div className="mt-4 border-t border-borderLight pt-4 space-y-3">
+            <p className="text-sm text-ink2">
+              <span className="font-semibold text-green">{reporteGuias.actualizados}</span> pedidos
+              actualizados con número de guía desde Shopify.
+              {reporteGuias.pendientesShopify > 0 && (
+                <>
+                  {" "}
+                  Quedan <span className="font-semibold">{reporteGuias.pendientesShopify}</span> pedidos
+                  de Shopify por revisar — dale otra vez a &quot;Seguir trayendo guías&quot;.
+                </>
+              )}
+            </p>
+
+            {reporteGuias.raros.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-amber2 uppercase tracking-wide mb-1.5">
+                  Números raros ({reporteGuias.raros.length}) — no se guardaron, valídalos tú
+                </p>
+                <div className="max-h-52 overflow-y-auto rounded-md border border-borderLight">
+                  <table className="w-full text-xs">
+                    <tbody>
+                      {reporteGuias.raros.map((r, i) => (
+                        <tr key={i} className="border-b border-borderLight last:border-b-0">
+                          <td className="px-3 py-1.5 text-ink2">{r.numeroOrden || "—"}</td>
+                          <td className="px-3 py-1.5 text-muted2">{r.cliente || "—"}</td>
+                          <td className="px-3 py-1.5 text-right font-medium text-amber2">{r.valor}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {reporteGuias.vacios.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-red uppercase tracking-wide mb-1.5">
+                  Sin número de guía en Shopify ({reporteGuias.vacios.length})
+                </p>
+                <div className="max-h-52 overflow-y-auto rounded-md border border-borderLight">
+                  <table className="w-full text-xs">
+                    <tbody>
+                      {reporteGuias.vacios.map((v, i) => (
+                        <tr key={i} className="border-b border-borderLight last:border-b-0">
+                          <td className="px-3 py-1.5 text-ink2">{v.numeroOrden || "—"}</td>
+                          <td className="px-3 py-1.5 text-muted2">{v.cliente || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {reporteGuias.manualesVacios > 0 && (
+              <p className="text-xs text-muted2">
+                Además hay {reporteGuias.manualesVacios} pedidos sin origen Shopify (manuales) sin
+                número de guía — esos no se pueden traer automáticamente.
+              </p>
+            )}
+          </div>
         )}
       </div>
 
