@@ -2,17 +2,18 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 type FulfillmentShopify = { tracking_number: string | null };
 type OrdenConGuia = { id: number; name: string; fulfillments: FulfillmentShopify[] };
 
 const PLACEHOLDERS_GUIA = ["n/a", "na", "-", "sin guia", "singuia", "pendiente", "0", "0000", "000000"];
 const FORMATO_VALIDO = /^[A-Za-z0-9-]{5,30}$/;
-const TAMANO_LOTE = 50;
-// Tope de seguridad para no correr indefinidamente si el catálogo es enorme;
-// con esto alcanza para ~10.000 pedidos por invocación (300ms de espera c/u).
-const MAX_PROCESADOS_POR_LLAMADA = 10000;
+const TAMANO_LOTE = 25;
+// Cada invocación se corta sola bastante antes de cualquier límite de
+// plataforma (Vercel Hobby ya mata funciones a los 10s). El navegador es
+// quien vuelve a llamar automáticamente hasta que no quede nada pendiente.
+const TIEMPO_MAX_MS = 8000;
 
 function limpiarGuia(valor: string | null | undefined): string | null {
   if (!valor) return null;
@@ -34,16 +35,15 @@ export async function POST() {
     );
   }
 
+  const inicio = Date.now();
+
   try {
     let actualizados = 0;
     let procesados = 0;
     const vacios: { numeroOrden: string | null; cliente: string | null }[] = [];
     const raros: { numeroOrden: string | null; cliente: string | null; valor: string }[] = [];
 
-    // Se procesa en lotes internos hasta agotar la cola completa (no requiere
-    // que el usuario vuelva a hacer clic): cada pedido que se resuelve deja
-    // de aparecer en la siguiente consulta porque ya no tiene numeroGuia null.
-    while (procesados < MAX_PROCESADOS_POR_LLAMADA) {
+    while (Date.now() - inicio < TIEMPO_MAX_MS) {
       const lote = await prisma.pedido.findMany({
         where: { origen: "SHOPIFY", numeroGuia: null, shopifyOrderId: { not: null } },
         orderBy: { creadoEn: "desc" },
@@ -54,6 +54,8 @@ export async function POST() {
       if (lote.length === 0) break;
 
       for (const pedido of lote) {
+        if (Date.now() - inicio >= TIEMPO_MAX_MS) break;
+
         try {
           const res = await fetch(
             `https://${domain}/admin/api/2024-10/orders/${pedido.shopifyOrderId}.json?fields=id,name,fulfillments`,
@@ -64,29 +66,26 @@ export async function POST() {
           );
 
           if (res.status === 429) {
-            const espera = Number(res.headers.get("Retry-After")) || 2;
-            await esperar(espera * 1000);
-            continue; // reintenta este mismo pedido en la próxima vuelta del while externo no aplica; se deja pendiente y se recoge en la siguiente consulta
+            // Se deja pendiente: lo recoge la siguiente llamada del navegador.
+            break;
           }
 
           if (!res.ok) {
             vacios.push({ numeroOrden: pedido.numeroOrden, cliente: pedido.cliente });
-            await esperar(300);
-            continue;
-          }
-
-          const { order } = (await res.json()) as { order: OrdenConGuia };
-          const candidata = (order.fulfillments || [])
-            .map((f) => limpiarGuia(f.tracking_number))
-            .find((v) => v !== null);
-
-          if (!candidata) {
-            vacios.push({ numeroOrden: pedido.numeroOrden, cliente: pedido.cliente });
-          } else if (!FORMATO_VALIDO.test(candidata)) {
-            raros.push({ numeroOrden: pedido.numeroOrden, cliente: pedido.cliente, valor: candidata });
           } else {
-            await prisma.pedido.update({ where: { id: pedido.id }, data: { numeroGuia: candidata } });
-            actualizados++;
+            const { order } = (await res.json()) as { order: OrdenConGuia };
+            const candidata = (order.fulfillments || [])
+              .map((f) => limpiarGuia(f.tracking_number))
+              .find((v) => v !== null);
+
+            if (!candidata) {
+              vacios.push({ numeroOrden: pedido.numeroOrden, cliente: pedido.cliente });
+            } else if (!FORMATO_VALIDO.test(candidata)) {
+              raros.push({ numeroOrden: pedido.numeroOrden, cliente: pedido.cliente, valor: candidata });
+            } else {
+              await prisma.pedido.update({ where: { id: pedido.id }, data: { numeroGuia: candidata } });
+              actualizados++;
+            }
           }
         } catch {
           vacios.push({ numeroOrden: pedido.numeroOrden, cliente: pedido.cliente });

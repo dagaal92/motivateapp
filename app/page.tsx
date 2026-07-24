@@ -159,17 +159,35 @@ export default function Home() {
   const traerGuias = async () => {
     setTrayendoGuias(true);
     try {
-      const res = await fetch("/api/shopify/numeros-guia", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Error al traer números de guía");
-      setReporteGuias((prev) => ({
-        actualizados: (prev?.actualizados || 0) + data.actualizados,
-        vacios: [...(prev?.vacios || []), ...data.vacios],
-        raros: [...(prev?.raros || []), ...data.raros],
-        pendientesShopify: data.pendientesShopify,
-        manualesVacios: data.manualesVacios,
-      }));
-      if (data.actualizados > 0) await cargar();
+      let seguir = true;
+      let vueltasSinAvance = 0;
+      while (seguir) {
+        const res = await fetch("/api/shopify/numeros-guia", { method: "POST" });
+        const esJson = res.headers.get("content-type")?.includes("application/json");
+        const data = esJson ? await res.json() : null;
+
+        if (!res.ok || !data) {
+          const texto = !esJson ? await res.text().catch(() => "") : "";
+          throw new Error(
+            data?.error ||
+              `El servidor no respondió correctamente (${res.status}). ${texto.slice(0, 120)}`
+          );
+        }
+
+        setReporteGuias((prev) => ({
+          actualizados: (prev?.actualizados || 0) + data.actualizados,
+          vacios: [...(prev?.vacios || []), ...data.vacios],
+          raros: [...(prev?.raros || []), ...data.raros],
+          pendientesShopify: data.pendientesShopify,
+          manualesVacios: data.manualesVacios,
+        }));
+        if (data.actualizados > 0 || data.vacios.length > 0 || data.raros.length > 0) {
+          await cargar();
+        }
+
+        vueltasSinAvance = data.procesados > 0 ? 0 : vueltasSinAvance + 1;
+        seguir = data.pendientesShopify > 0 && vueltasSinAvance < 3;
+      }
     } catch (err) {
       alert(err instanceof Error ? err.message : "No se pudo traer los números de guía");
     } finally {
@@ -355,9 +373,9 @@ export default function Home() {
               {reporteGuias.pendientesShopify > 0 && (
                 <>
                   {" "}
-                  Se cortó antes de terminar (por tiempo o límite de Shopify): quedan{" "}
-                  <span className="font-semibold">{reporteGuias.pendientesShopify}</span> pedidos sin
-                  revisar — dale otra vez a &quot;Reintentar pendientes&quot; para continuar donde quedó.
+                  Quedaron <span className="font-semibold">{reporteGuias.pendientesShopify}</span>{" "}
+                  pedidos sin poder revisar (Shopify no respondió varias veces seguidas) — dale otra
+                  vez a &quot;Reintentar pendientes&quot;.
                 </>
               )}
             </p>
