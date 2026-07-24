@@ -135,7 +135,7 @@ export default function Home() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error al sincronizar");
       setMensajeSync(
-        `Listo: ${data.creados} pedidos nuevos, ${data.actualizados} actualizados.`
+        `Listo: ${data.creados} pedidos nuevos. ${data.existentes} ya existían y no se modificaron.`
       );
       await cargar();
     } catch (err) {
