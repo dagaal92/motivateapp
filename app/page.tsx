@@ -38,6 +38,7 @@ type Pedido = {
   valorTotal: number;
   general: string | null;
   envio: string | null;
+  numeroGuia: string | null;
   estado: EstadoPedido;
   origen: string;
   creadoEn: string;
@@ -620,6 +621,7 @@ export default function Home() {
                 <th className="px-5 py-3 text-right">Valor</th>
                 <th className="px-5 py-3">General</th>
                 <th className="px-5 py-3">Envío</th>
+                <th className="px-5 py-3">Número de guía</th>
                 <th className="px-5 py-3">Estado</th>
                 <th className="px-5 py-3 text-center">Acciones</th>
               </tr>
@@ -641,6 +643,7 @@ export default function Home() {
                     </td>
                     <td className="px-5 py-3 text-muted2">{p.general || "—"}</td>
                     <td className="px-5 py-3 text-muted2">{p.envio || "—"}</td>
+                    <td className="px-5 py-3 text-muted2">{p.numeroGuia || "—"}</td>
                     <td className="px-5 py-3">
                       {editandoId === p.id ? (
                         <select
