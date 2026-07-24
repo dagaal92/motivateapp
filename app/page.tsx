@@ -159,7 +159,7 @@ export default function Home() {
   const traerGuias = async () => {
     setTrayendoGuias(true);
     try {
-      const res = await fetch("/api/shopify/numeros-guia?limite=25", { method: "POST" });
+      const res = await fetch("/api/shopify/numeros-guia", { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error al traer números de guía");
       setReporteGuias((prev) => ({
@@ -337,9 +337,9 @@ export default function Home() {
           >
             <Hash size={15} className={trayendoGuias ? "animate-pulse" : ""} />
             {trayendoGuias
-              ? "Trayendo guías…"
-              : reporteGuias
-              ? "Seguir trayendo guías"
+              ? "Trayendo guías… puede tardar varios minutos"
+              : reporteGuias && reporteGuias.pendientesShopify > 0
+              ? "Reintentar pendientes"
               : "Traer números de guía"}
           </button>
         </div>
@@ -355,8 +355,9 @@ export default function Home() {
               {reporteGuias.pendientesShopify > 0 && (
                 <>
                   {" "}
-                  Quedan <span className="font-semibold">{reporteGuias.pendientesShopify}</span> pedidos
-                  de Shopify por revisar — dale otra vez a &quot;Seguir trayendo guías&quot;.
+                  Se cortó antes de terminar (por tiempo o límite de Shopify): quedan{" "}
+                  <span className="font-semibold">{reporteGuias.pendientesShopify}</span> pedidos sin
+                  revisar — dale otra vez a &quot;Reintentar pendientes&quot; para continuar donde quedó.
                 </>
               )}
             </p>
