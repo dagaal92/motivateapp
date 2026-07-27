@@ -127,7 +127,10 @@ export default function PreparacionPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pedidoIds: ids }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.detalle || data?.error || "No se pudieron generar las etiquetas");
+      }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -150,8 +153,8 @@ export default function PreparacionPage() {
       );
       setSeleccionados(new Set());
       await cargar();
-    } catch {
-      alert("No se pudieron generar las etiquetas");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "No se pudieron generar las etiquetas");
     } finally {
       setImprimiendo(false);
     }
