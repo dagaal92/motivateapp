@@ -5,6 +5,13 @@ export const dynamic = "force-dynamic";
 
 const pdfMake = require("pdfmake");
 
+const FUENTES_ESTANDAR = new Set([
+  "Helvetica",
+  "Helvetica-Bold",
+  "Helvetica-Oblique",
+  "Helvetica-BoldOblique",
+]);
+
 pdfMake.setFonts({
   Helvetica: {
     normal: "Helvetica",
@@ -14,7 +21,9 @@ pdfMake.setFonts({
   },
 });
 pdfMake.setUrlAccessPolicy(() => false);
-pdfMake.setLocalAccessPolicy(() => false);
+// Solo se permite el acceso a las fuentes estándar que configuramos arriba;
+// cualquier otra ruta de archivo local queda bloqueada.
+pdfMake.setLocalAccessPolicy((path: string) => FUENTES_ESTANDAR.has(path));
 
 const LABEL_WIDTH = 189; // 5cm en puntos (1cm = 37.8pt)
 const LABEL_HEIGHT = 94.5; // 2.5cm en puntos
