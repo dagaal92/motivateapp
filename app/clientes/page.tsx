@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Users,
   Pencil,
@@ -433,7 +434,12 @@ export default function ClientesPage() {
                                 {(pedidosPorTelefono[c.telefono] || []).map((p) => (
                                   <tr key={p.id} className="border-t border-borderLight">
                                     <td className="py-2 text-ink2">
-                                      {p.numeroOrden ? `#${p.numeroOrden}` : "—"}
+                                      <Link
+                                        href={`/pedidos/${p.id}/editar`}
+                                        className="text-accent hover:underline"
+                                      >
+                                        {p.numeroOrden ? `#${p.numeroOrden}` : "Ver pedido"}
+                                      </Link>
                                     </td>
                                     <td className="py-2 text-muted2">{fmtFecha(p.creadoEn)}</td>
                                     <td className="py-2 text-muted2">
