@@ -235,24 +235,30 @@ export default function DashboardPage() {
         <p className="text-sm text-muted2">Cargando dashboard…</p>
       ) : (
         datos && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {tarjetas.map((t) => (
               <div
                 key={t.label}
-                className="bg-card border border-borderLight rounded-xl p-5"
+                className="bg-card border border-borderLight rounded-xl p-3 sm:p-5"
               >
-                <div className="flex items-start gap-3">
+                <div className="flex flex-col sm:flex-row items-start gap-2 sm:gap-3">
                   <div
-                    className={`w-10 h-10 rounded-lg ${t.bg} ${t.fg} flex items-center justify-center shrink-0`}
+                    className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg ${t.bg} ${t.fg} flex items-center justify-center shrink-0`}
                   >
-                    <t.icon size={20} />
+                    <t.icon size={18} />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-medium text-muted2">{t.label}</p>
-                    <p className="text-2xl font-semibold text-ink2 mt-0.5 truncate">
+                    <p className="text-[11px] sm:text-xs font-medium text-muted2 leading-tight">
+                      {t.label}
+                    </p>
+                    <p className="text-lg sm:text-2xl font-semibold text-ink2 mt-0.5 truncate">
                       {t.valor}
                     </p>
-                    {t.sub && <p className="text-[11px] text-muted2 mt-0.5">{t.sub}</p>}
+                    {t.sub && (
+                      <p className="text-[10px] sm:text-[11px] text-muted2 mt-0.5 leading-tight">
+                        {t.sub}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
