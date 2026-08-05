@@ -8,7 +8,6 @@ import {
   Trash2,
   History,
   CircleDollarSign,
-  CalendarClock,
   AlertTriangle,
 } from "lucide-react";
 
@@ -516,56 +515,6 @@ export default function DeudasPage() {
               </p>
             </div>
           </div>
-
-          {/* Línea de tiempo */}
-          {timeline.length > 0 && (
-            <div className="bg-card border border-borderLight rounded-xl overflow-hidden">
-              <div className="px-5 py-4 border-b border-borderLight flex items-center gap-2">
-                <CalendarClock size={16} className="text-muted2" />
-                <p className="text-sm font-semibold text-ink2">Línea de tiempo de pagos</p>
-              </div>
-              <div>
-                {timeline.map(({ deuda: d, ciclo }) => (
-                  <div
-                    key={d.id}
-                    className="flex flex-wrap items-center gap-3 px-5 py-3 border-t border-borderLight first:border-t-0"
-                  >
-                    <span
-                      className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                        ciclo.tono === "danger"
-                          ? "bg-red"
-                          : ciclo.tono === "warning"
-                          ? "bg-amber2"
-                          : ciclo.tono === "success"
-                          ? "bg-green"
-                          : "bg-accent"
-                      }`}
-                    />
-                    <div className="flex-1 min-w-[160px]">
-                      <p className="text-sm font-medium text-ink2">{d.nombre}</p>
-                      <p className="text-xs text-muted2">
-                        Día {d.diaPago} {d.cuenta ? `· ${d.cuenta.nombre}` : ""}
-                      </p>
-                    </div>
-                    {d.cuotaMensual !== null && (
-                      <span className="text-sm font-semibold text-ink2">{fmt(d.cuotaMensual)}</span>
-                    )}
-                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${TONO_CLS[ciclo.tono]}`}>
-                      {ciclo.label}
-                    </span>
-                    {ciclo.key !== "pagada" && ciclo.key !== "liquidada" && (
-                      <button
-                        onClick={() => abrirPago(d)}
-                        className="text-xs font-semibold text-accent hover:underline"
-                      >
-                        Registrar pago
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Tabla de deudas */}
           <div className="bg-card border border-borderLight rounded-xl overflow-hidden">
