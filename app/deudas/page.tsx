@@ -701,6 +701,12 @@ export default function DeudasPage() {
               <p className="text-xs text-muted2">
                 Saldo pendiente actual: {fmt(pagoDeuda.saldoPendiente)}
               </p>
+              {pagoDeuda.cuotaMensual !== null && (
+                <p className="text-xs text-muted2">
+                  Si pagas más que la cuota fija ({fmt(pagoDeuda.cuotaMensual)}), el excedente se
+                  abona a capital y se recalculan las cuotas pendientes automáticamente.
+                </p>
+              )}
               <div className="flex gap-2 pt-1">
                 <button
                   type="submit"

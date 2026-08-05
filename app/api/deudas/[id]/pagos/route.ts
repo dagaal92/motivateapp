@@ -1,8 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, CuotaDeuda } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
+
+// Reamortiza las cuotas no pagadas de una deuda tras un abono extra a capital,
+// manteniendo el valor de la cuota fija y reduciendo el número de cuotas restantes.
+function reamortizar(futuras: CuotaDeuda[], abonoExtra: number, cuotaMensual: number | null) {
+  const otros = futuras[0].otros;
+  const A = (cuotaMensual ?? futuras[0].capital + futuras[0].interes) - otros;
+
+  // Tasa periódica implícita: interés de la primera cuota futura / saldo pendiente en ese punto
+  // (el saldo al inicio de esa cuota es la suma de capital de todas las cuotas futuras).
+  const saldoInicial = futuras.reduce((s, c) => s + c.capital, 0);
+  const i = saldoInicial > 0 ? futuras[0].interes / saldoInicial : 0;
+
+  let saldo = Math.max(0, saldoInicial - abonoExtra);
+
+  const actualizaciones: { id: string; capital: number; interes: number; total: number }[] = [];
+  const aEliminar: string[] = [];
+
+  for (const cuota of futuras) {
+    if (saldo <= 0) {
+      aEliminar.push(cuota.id);
+      continue;
+    }
+    let interes = Math.round(saldo * i);
+    let capital = A - interes;
+    if (capital >= saldo) {
+      capital = saldo;
+      interes = Math.round(saldo * i);
+    }
+    saldo -= capital;
+    actualizaciones.push({ id: cuota.id, capital, interes, total: capital + interes + otros });
+  }
+
+  return { actualizaciones, aEliminar };
+}
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -30,12 +64,22 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         data: { saldo: cuenta.saldo - montoNum },
       });
 
+      // Si el pago es mayor a la cuota fija, el excedente se trata como abono extra a
+      // capital: se marca pagada la cuota más próxima y se reamortizan las siguientes.
+      const abonoExtra =
+        deuda.cuotaMensual !== null && montoNum > deuda.cuotaMensual
+          ? montoNum - deuda.cuotaMensual
+          : 0;
+
       const movimiento = await tx.movimiento.create({
         data: {
           cuentaId,
           tipo: "EGRESO",
           monto: montoNum,
-          descripcion: `Pago deuda: ${deuda.nombre}`,
+          descripcion:
+            abonoExtra > 0
+              ? `Pago deuda: ${deuda.nombre} (incluye abono extra a capital de ${abonoExtra})`
+              : `Pago deuda: ${deuda.nombre}`,
           categoria: "Pago de deuda",
         },
       });
@@ -49,7 +93,51 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         },
       });
 
-      const nuevoSaldoPendiente = Math.max(0, deuda.saldoPendiente - montoNum);
+      let seReamortizo = false;
+
+      if (abonoExtra > 0) {
+        const futuras = await tx.cuotaDeuda.findMany({
+          where: { deudaId: deuda.id, pagada: false },
+          orderBy: { fechaVencimiento: "asc" },
+        });
+
+        if (futuras.length > 0) {
+          const [cuotaDelMes, ...restantes] = futuras;
+          await tx.cuotaDeuda.update({
+            where: { id: cuotaDelMes.id },
+            data: { pagada: true },
+          });
+          seReamortizo = true;
+
+          if (restantes.length > 0) {
+            const { actualizaciones, aEliminar } = reamortizar(
+              restantes,
+              abonoExtra,
+              deuda.cuotaMensual
+            );
+
+            for (const u of actualizaciones) {
+              await tx.cuotaDeuda.update({
+                where: { id: u.id },
+                data: { capital: u.capital, interes: u.interes, total: u.total },
+              });
+            }
+            if (aEliminar.length > 0) {
+              await tx.cuotaDeuda.deleteMany({ where: { id: { in: aEliminar } } });
+            }
+          }
+        }
+      }
+
+      let nuevoSaldoPendiente: number;
+      if (seReamortizo) {
+        const cuotasRestantes = await tx.cuotaDeuda.findMany({
+          where: { deudaId: deuda.id, pagada: false },
+        });
+        nuevoSaldoPendiente = cuotasRestantes.reduce((s, c) => s + c.total, 0);
+      } else {
+        nuevoSaldoPendiente = Math.max(0, deuda.saldoPendiente - montoNum);
+      }
 
       const deudaActualizada = await tx.deuda.update({
         where: { id: deuda.id },
