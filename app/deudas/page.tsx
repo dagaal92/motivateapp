@@ -9,7 +9,6 @@ import {
   History,
   CircleDollarSign,
   AlertTriangle,
-  TrendingDown,
 } from "lucide-react";
 
 type Cuenta = { id: string; nombre: string };
@@ -135,10 +134,6 @@ export default function DeudasPage() {
   const [pagoDeuda, setPagoDeuda] = useState<Deuda | null>(null);
   const [pagoForm, setPagoForm] = useState({ cuentaId: "", monto: "" });
   const [registrandoPago, setRegistrandoPago] = useState(false);
-
-  const [abonoExtraDeuda, setAbonoExtraDeuda] = useState<Deuda | null>(null);
-  const [abonoExtraForm, setAbonoExtraForm] = useState({ cuentaId: "", monto: "" });
-  const [registrandoAbonoExtra, setRegistrandoAbonoExtra] = useState(false);
 
   const [historialDeuda, setHistorialDeuda] = useState<Deuda | null>(null);
   const [cuotas, setCuotas] = useState<Cuota[]>([]);
@@ -273,31 +268,6 @@ export default function DeudasPage() {
       alert("No se pudo registrar el pago");
     } finally {
       setRegistrandoPago(false);
-    }
-  };
-
-  const abrirAbonoExtra = (d: Deuda) => {
-    setAbonoExtraDeuda(d);
-    setAbonoExtraForm({ cuentaId: d.cuenta?.id || "", monto: "" });
-  };
-
-  const registrarAbonoExtra = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!abonoExtraDeuda || !abonoExtraForm.cuentaId || !abonoExtraForm.monto) return;
-    setRegistrandoAbonoExtra(true);
-    try {
-      const res = await fetch(`/api/deudas/${abonoExtraDeuda.id}/abono-extra`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(abonoExtraForm),
-      });
-      if (!res.ok) throw new Error();
-      setAbonoExtraDeuda(null);
-      await cargar();
-    } catch {
-      alert("No se pudo registrar el abono extra");
-    } finally {
-      setRegistrandoAbonoExtra(false);
     }
   };
 
@@ -615,15 +585,6 @@ export default function DeudasPage() {
                                   <CircleDollarSign size={15} />
                                 </button>
                               )}
-                              {d.estado === "ACTIVA" && (
-                                <button
-                                  onClick={() => abrirAbonoExtra(d)}
-                                  title="Abono extra a capital"
-                                  className="w-8 h-8 flex items-center justify-center rounded-md text-muted2 hover:bg-accentSoft hover:text-accent transition-colors"
-                                >
-                                  <TrendingDown size={15} />
-                                </button>
-                              )}
                               <button
                                 onClick={() => abrirHistorial(d)}
                                 title="Ver pagos"
@@ -701,6 +662,12 @@ export default function DeudasPage() {
               <p className="text-xs text-muted2">
                 Saldo pendiente actual: {fmt(pagoDeuda.saldoPendiente)}
               </p>
+              {pagoDeuda.cuotaMensual !== null && (
+                <p className="text-xs text-muted2">
+                  Si pagas más que la cuota fija ({fmt(pagoDeuda.cuotaMensual)}), el excedente se
+                  abona a capital y se recalculan las cuotas pendientes automáticamente.
+                </p>
+              )}
               <div className="flex gap-2 pt-1">
                 <button
                   type="submit"
@@ -712,72 +679,6 @@ export default function DeudasPage() {
                 <button
                   type="button"
                   onClick={() => setPagoDeuda(null)}
-                  className="bg-paper text-ink2 text-sm font-medium px-4 py-2 rounded-md hover:bg-borderLight transition-colors"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: abono extra a capital */}
-      {abonoExtraDeuda && (
-        <div
-          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
-          onClick={() => setAbonoExtraDeuda(null)}
-        >
-          <div
-            className="bg-white rounded-xl p-5 w-full max-w-sm"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="text-base font-semibold text-ink2 mb-1">Abono extra a capital</h2>
-            <p className="text-sm text-muted2 mb-4">{abonoExtraDeuda.nombre}</p>
-            <form onSubmit={registrarAbonoExtra} className="space-y-3">
-              <div>
-                <label className={labelCls}>Billetera de la que sale el abono</label>
-                <select
-                  required
-                  value={abonoExtraForm.cuentaId}
-                  onChange={(e) => setAbonoExtraForm((f) => ({ ...f, cuentaId: e.target.value }))}
-                  className={inputCls}
-                >
-                  <option value="">Selecciona...</option>
-                  {cuentas.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className={labelCls}>Valor del abono extra (solo la parte adicional a la cuota normal)</label>
-                <input
-                  required
-                  type="number"
-                  min="1"
-                  value={abonoExtraForm.monto}
-                  onChange={(e) => setAbonoExtraForm((f) => ({ ...f, monto: e.target.value }))}
-                  className={inputCls}
-                />
-              </div>
-              <p className="text-xs text-muted2">
-                Se descuenta directo del capital y se recalculan las cuotas pendientes manteniendo el
-                mismo valor de cuota ({abonoExtraDeuda.cuotaMensual !== null ? fmt(abonoExtraDeuda.cuotaMensual) : "—"})
-                pero reduciendo los meses restantes.
-              </p>
-              <div className="flex gap-2 pt-1">
-                <button
-                  type="submit"
-                  disabled={registrandoAbonoExtra}
-                  className="flex-1 bg-accent text-white text-sm font-medium px-4 py-2 rounded-md hover:bg-accent/90 transition-colors disabled:opacity-50"
-                >
-                  {registrandoAbonoExtra ? "Registrando…" : "Registrar abono extra"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAbonoExtraDeuda(null)}
                   className="bg-paper text-ink2 text-sm font-medium px-4 py-2 rounded-md hover:bg-borderLight transition-colors"
                 >
                   Cancelar
