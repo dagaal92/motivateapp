@@ -67,9 +67,26 @@ model Deuda {
   creadoEn       DateTime    @default(now())
   actualizadoEn  DateTime    @updatedAt
   pagos          PagoDeuda[]
+  cuotas         CuotaDeuda[]
 
   @@index([estado])
   @@index([cuentaId])
+}
+
+model CuotaDeuda {
+  id                String   @id @default(cuid())
+  deudaId           String
+  deuda             Deuda    @relation(fields: [deudaId], references: [id], onDelete: Cascade)
+  numeroCuota       String
+  fechaVencimiento  DateTime
+  capital           Int
+  interes           Int
+  otros             Int      @default(0)
+  total             Int
+  pagada            Boolean  @default(false)
+  creadoEn          DateTime @default(now())
+
+  @@index([deudaId])
 }
 
 model PagoDeuda {
