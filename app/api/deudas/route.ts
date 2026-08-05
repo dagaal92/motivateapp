@@ -17,6 +17,10 @@ export async function GET() {
           where: { fecha: { gte: inicioMes } },
           orderBy: { fecha: "desc" },
         },
+        cuotas: {
+          where: { pagada: false },
+          select: { capital: true },
+        },
       },
     });
 

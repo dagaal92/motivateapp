@@ -52,6 +52,7 @@ type Deuda = {
   notas: string | null;
   cuenta: { id: string; nombre: string } | null;
   pagos: PagoDeuda[]; // pagos del mes en curso (filtrado por el backend)
+  cuotas: { capital: number }[]; // cuotas no pagadas (filtrado por el backend)
 };
 
 const fmt = (n: number) =>
@@ -169,6 +170,10 @@ export default function DeudasPage() {
   const activas = useMemo(() => deudas.filter((d) => d.estado === "ACTIVA"), [deudas]);
 
   const totalDeuda = activas.reduce((sum, d) => sum + d.saldoPendiente, 0);
+  const totalCapital = activas.reduce(
+    (sum, d) => sum + (d.cuotas.length > 0 ? d.cuotas.reduce((s, c) => s + c.capital, 0) : d.saldoPendiente),
+    0
+  );
 
   const cuotasDelMes = activas.filter((d) => d.cuotaMensual !== null);
   const totalCuotasMes = cuotasDelMes.reduce((sum, d) => sum + (d.cuotaMensual || 0), 0);
@@ -482,7 +487,10 @@ export default function DeudasPage() {
               <p className="text-2xl font-semibold text-ink2 mt-1">{fmt(totalDeuda)}</p>
               <p className="text-xs text-muted2 mt-1.5">
                 {activas.length} deuda{activas.length === 1 ? "" : "s"} activa
-                {activas.length === 1 ? "" : "s"}
+                {activas.length === 1 ? "" : "s"} · incluye intereses y seguros pendientes
+              </p>
+              <p className="text-xs text-ink2 font-medium mt-1">
+                Solo capital: {fmt(totalCapital)}
               </p>
             </div>
             <div className="bg-card border border-borderLight rounded-xl p-4">
