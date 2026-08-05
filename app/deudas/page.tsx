@@ -21,6 +21,26 @@ type PagoDeuda = {
   cuenta: { nombre: string };
 };
 
+type Cuota = {
+  id: string;
+  numeroCuota: string;
+  fechaVencimiento: string;
+  capital: number;
+  interes: number;
+  otros: number;
+  total: number;
+  pagada: boolean;
+};
+
+const CUOTA_VACIA = {
+  numeroCuota: "",
+  fechaVencimiento: "",
+  capital: "",
+  interes: "",
+  otros: "",
+  total: "",
+};
+
 type Deuda = {
   id: string;
   nombre: string;
@@ -117,8 +137,11 @@ export default function DeudasPage() {
   const [registrandoPago, setRegistrandoPago] = useState(false);
 
   const [historialDeuda, setHistorialDeuda] = useState<Deuda | null>(null);
-  const [historial, setHistorial] = useState<PagoDeuda[]>([]);
+  const [cuotas, setCuotas] = useState<Cuota[]>([]);
   const [cargandoHistorial, setCargandoHistorial] = useState(false);
+  const [formCuotaAbierto, setFormCuotaAbierto] = useState(false);
+  const [formCuota, setFormCuota] = useState(CUOTA_VACIA);
+  const [guardandoCuota, setGuardandoCuota] = useState(false);
 
   const hoy = useMemo(() => new Date(), []);
 
@@ -249,15 +272,60 @@ export default function DeudasPage() {
     }
   };
 
+  const cargarCuotas = useCallback(async (deudaId: string) => {
+    const res = await fetch(`/api/deudas/${deudaId}/cuotas`);
+    setCuotas(res.ok ? await res.json() : []);
+  }, []);
+
   const abrirHistorial = async (d: Deuda) => {
     setHistorialDeuda(d);
+    setFormCuotaAbierto(false);
+    setFormCuota(CUOTA_VACIA);
     setCargandoHistorial(true);
     try {
-      const res = await fetch(`/api/deudas/${d.id}/pagos`);
-      setHistorial(res.ok ? await res.json() : []);
+      await cargarCuotas(d.id);
     } finally {
       setCargandoHistorial(false);
     }
+  };
+
+  const guardarCuota = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!historialDeuda || !formCuota.numeroCuota.trim() || !formCuota.fechaVencimiento || !formCuota.total)
+      return;
+    setGuardandoCuota(true);
+    try {
+      const res = await fetch(`/api/deudas/${historialDeuda.id}/cuotas`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formCuota),
+      });
+      if (!res.ok) throw new Error();
+      setFormCuota(CUOTA_VACIA);
+      setFormCuotaAbierto(false);
+      await cargarCuotas(historialDeuda.id);
+    } catch {
+      alert("No se pudo agregar la cuota");
+    } finally {
+      setGuardandoCuota(false);
+    }
+  };
+
+  const alternarPagada = async (cuota: Cuota) => {
+    if (!historialDeuda) return;
+    setCuotas((prev) => prev.map((c) => (c.id === cuota.id ? { ...c, pagada: !c.pagada } : c)));
+    await fetch(`/api/deudas/${historialDeuda.id}/cuotas/${cuota.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pagada: !cuota.pagada }),
+    });
+  };
+
+  const eliminarCuota = async (cuota: Cuota) => {
+    if (!historialDeuda) return;
+    if (!confirm(`¿Eliminar la cuota ${cuota.numeroCuota}?`)) return;
+    setCuotas((prev) => prev.filter((c) => c.id !== cuota.id));
+    await fetch(`/api/deudas/${historialDeuda.id}/cuotas/${cuota.id}`, { method: "DELETE" });
   };
 
   return (
@@ -666,40 +734,164 @@ export default function DeudasPage() {
         </div>
       )}
 
-      {/* Modal: historial de pagos */}
+      {/* Modal: cronograma de cuotas */}
       {historialDeuda && (
         <div
           className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
           onClick={() => setHistorialDeuda(null)}
         >
           <div
-            className="bg-white rounded-xl p-5 w-full max-w-md max-h-[80vh] overflow-y-auto"
+            className="bg-white rounded-xl p-5 w-full max-w-3xl max-h-[85vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-base font-semibold text-ink2 mb-1">Historial de pagos</h2>
-            <p className="text-sm text-muted2 mb-4">{historialDeuda.nombre}</p>
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <div>
+                <h2 className="text-base font-semibold text-ink2">Cronograma de cuotas</h2>
+                <p className="text-sm text-muted2">{historialDeuda.nombre}</p>
+              </div>
+              <button
+                onClick={() => setFormCuotaAbierto((v) => !v)}
+                className="flex items-center gap-1.5 bg-accent text-white text-xs font-medium px-3 py-1.5 rounded-md hover:bg-accent/90 transition-colors shrink-0"
+              >
+                <Plus size={14} /> Agregar cuota
+              </button>
+            </div>
+
+            {formCuotaAbierto && (
+              <form
+                onSubmit={guardarCuota}
+                className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3 mb-4 border border-borderLight rounded-lg p-3 bg-paper"
+              >
+                <div>
+                  <label className={labelCls}>N° cuota</label>
+                  <input
+                    required
+                    value={formCuota.numeroCuota}
+                    onChange={(e) => setFormCuota((f) => ({ ...f, numeroCuota: e.target.value }))}
+                    className={inputCls}
+                    placeholder="1, Inicial..."
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>Vence</label>
+                  <input
+                    required
+                    type="date"
+                    value={formCuota.fechaVencimiento}
+                    onChange={(e) => setFormCuota((f) => ({ ...f, fechaVencimiento: e.target.value }))}
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>Capital</label>
+                  <input
+                    type="number"
+                    value={formCuota.capital}
+                    onChange={(e) => setFormCuota((f) => ({ ...f, capital: e.target.value }))}
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>Interés</label>
+                  <input
+                    type="number"
+                    value={formCuota.interes}
+                    onChange={(e) => setFormCuota((f) => ({ ...f, interes: e.target.value }))}
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>Otros (Aval + IVA Aval)</label>
+                  <input
+                    type="number"
+                    value={formCuota.otros}
+                    onChange={(e) => setFormCuota((f) => ({ ...f, otros: e.target.value }))}
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>Total</label>
+                  <input
+                    required
+                    type="number"
+                    value={formCuota.total}
+                    onChange={(e) => setFormCuota((f) => ({ ...f, total: e.target.value }))}
+                    className={inputCls}
+                  />
+                </div>
+                <div className="col-span-2 sm:col-span-3 flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={guardandoCuota}
+                    className="bg-accent text-white text-sm font-medium px-4 py-2 rounded-md hover:bg-accent/90 transition-colors disabled:opacity-50"
+                  >
+                    {guardandoCuota ? "Guardando…" : "Guardar cuota"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormCuotaAbierto(false)}
+                    className="bg-white border border-borderLight text-ink2 text-sm font-medium px-4 py-2 rounded-md hover:bg-borderLight transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            )}
+
             {cargandoHistorial ? (
               <p className="text-sm text-muted2">Cargando…</p>
-            ) : historial.length === 0 ? (
+            ) : cuotas.length === 0 ? (
               <p className="text-sm text-muted2 flex items-center gap-2">
-                <AlertTriangle size={14} /> Todavía no hay pagos registrados para esta deuda.
+                <AlertTriangle size={14} /> Todavía no hay cuotas cargadas para esta deuda.
               </p>
             ) : (
-              <div className="space-y-2">
-                {historial.map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex items-center justify-between bg-paper rounded-md px-3 py-2"
-                  >
-                    <div>
-                      <p className="text-sm text-ink2">{fmtFecha(p.fecha)}</p>
-                      <p className="text-xs text-muted2">{p.cuenta.nombre}</p>
-                    </div>
-                    <p className="text-sm font-semibold text-ink2">{fmt(p.monto)}</p>
-                  </div>
-                ))}
+              <div className="overflow-x-auto border border-borderLight rounded-lg">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-paper text-left text-xs font-semibold text-muted2 uppercase tracking-wide">
+                      <th className="px-3 py-2">N° Cuota</th>
+                      <th className="px-3 py-2">Vence</th>
+                      <th className="px-3 py-2 text-right">Capital</th>
+                      <th className="px-3 py-2 text-right">Interés</th>
+                      <th className="px-3 py-2 text-right">Otros</th>
+                      <th className="px-3 py-2 text-right">Total</th>
+                      <th className="px-3 py-2 text-center">Pagada</th>
+                      <th className="px-3 py-2"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cuotas.map((c) => (
+                      <tr key={c.id} className="border-t border-borderLight">
+                        <td className="px-3 py-2 text-ink2">{c.numeroCuota}</td>
+                        <td className="px-3 py-2 text-muted2">{fmtFecha(c.fechaVencimiento)}</td>
+                        <td className="px-3 py-2 text-right text-ink2">{fmt(c.capital)}</td>
+                        <td className="px-3 py-2 text-right text-ink2">{fmt(c.interes)}</td>
+                        <td className="px-3 py-2 text-right text-ink2">{fmt(c.otros)}</td>
+                        <td className="px-3 py-2 text-right font-semibold text-ink2">{fmt(c.total)}</td>
+                        <td className="px-3 py-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={c.pagada}
+                            onChange={() => alternarPagada(c)}
+                            className="w-4 h-4 accent-accent cursor-pointer"
+                          />
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          <button
+                            onClick={() => eliminarCuota(c)}
+                            title="Eliminar cuota"
+                            className="text-muted2 hover:text-red transition-colors"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
+
             <button
               onClick={() => setHistorialDeuda(null)}
               className="mt-4 w-full bg-paper text-ink2 text-sm font-medium px-4 py-2 rounded-md hover:bg-borderLight transition-colors"
