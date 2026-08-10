@@ -61,10 +61,48 @@ const SEVERIDAD_BARRA: Record<Severidad, string> = {
   out: "bg-red",
 };
 
-function colorPunto(variante: string | null): string {
-  if (!variante) return "#d1d5db";
-  const primera = variante.toLowerCase().split(" / ")[0].split(" ")[0];
+function colorPunto(color: string): string {
+  const primera = color.toLowerCase().split(" ")[0];
   return COLOR_DOTS[primera] || "#d1d5db";
+}
+
+const TALLA_REGEX = /^(xxs|xs|s|m|l|xl|xxl|xxxl|único|unico|\d+([.,]\d+)?)$/i;
+function esTalla(v: string): boolean {
+  return TALLA_REGEX.test(v.trim());
+}
+
+/** Separa "Negro / S" o "S / Blanco" en { color, talla }; tolera cualquier orden. */
+function extraerColorTalla(variante: string | null): { color: string; talla: string } {
+  if (!variante) return { color: "Único", talla: "" };
+  const partes = variante.split(" / ").map((p) => p.trim()).filter(Boolean);
+  if (partes.length === 0) return { color: "Único", talla: "" };
+  if (partes.length === 1) {
+    return esTalla(partes[0]) ? { color: "Único", talla: partes[0] } : { color: partes[0], talla: "" };
+  }
+  const [a, b] = partes;
+  if (esTalla(a) && !esTalla(b)) return { color: b, talla: a };
+  return { color: a, talla: b };
+}
+
+const ORDEN_TALLA = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"];
+function compararTalla(a: string, b: string): number {
+  const ia = ORDEN_TALLA.indexOf(a.toUpperCase());
+  const ib = ORDEN_TALLA.indexOf(b.toUpperCase());
+  if (ia !== -1 && ib !== -1) return ia - ib;
+  if (ia !== -1) return -1;
+  if (ib !== -1) return 1;
+  const na = parseFloat(a.replace(",", "."));
+  const nb = parseFloat(b.replace(",", "."));
+  if (!isNaN(na) && !isNaN(nb)) return na - nb;
+  return a.localeCompare(b);
+}
+
+function severidadGrupo(items: { stock: number }[]): Severidad {
+  return items.reduce<Severidad>((peorActual, v) => {
+    const s = severidad(v.stock);
+    const rango: Record<Severidad, number> = { ok: 2, low: 1, out: 0 };
+    return rango[s] < rango[peorActual] ? s : peorActual;
+  }, "ok");
 }
 
 export default function InventarioPage() {
@@ -80,6 +118,7 @@ export default function InventarioPage() {
   const [busqueda, setBusqueda] = useState("");
   const [filtro, setFiltro] = useState<(typeof FILTROS)[number]["key"]>("todos");
   const [abiertos, setAbiertos] = useState<Set<string>>(new Set());
+  const [coloresAbiertos, setColoresAbiertos] = useState<Set<string>>(new Set());
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -104,14 +143,29 @@ export default function InventarioPage() {
   }, [cargar]);
 
   const grupos = useMemo(() => {
-    const mapa = new Map<string, Producto[]>();
+    const mapaProductos = new Map<string, Producto[]>();
     for (const p of productos) {
-      const lista = mapa.get(p.nombre) || [];
+      const lista = mapaProductos.get(p.nombre) || [];
       lista.push(p);
-      mapa.set(p.nombre, lista);
+      mapaProductos.set(p.nombre, lista);
     }
-    return Array.from(mapa.entries())
-      .map(([nombre, variantes]) => ({ nombre, variantes }))
+    return Array.from(mapaProductos.entries())
+      .map(([nombre, variantes]) => {
+        const mapaColores = new Map<string, (Producto & { talla: string })[]>();
+        for (const v of variantes) {
+          const { color, talla } = extraerColorTalla(v.variante);
+          const lista = mapaColores.get(color) || [];
+          lista.push({ ...v, talla });
+          mapaColores.set(color, lista);
+        }
+        const colores = Array.from(mapaColores.entries())
+          .map(([color, tallas]) => ({
+            color,
+            tallas: tallas.sort((a, b) => compararTalla(a.talla, b.talla)),
+          }))
+          .sort((a, b) => a.color.localeCompare(b.color));
+        return { nombre, variantes, colores };
+      })
       .sort((a, b) => a.nombre.localeCompare(b.nombre));
   }, [productos]);
 
@@ -131,15 +185,20 @@ export default function InventarioPage() {
   const gruposVisibles = useMemo(() => {
     return grupos
       .map((g) => {
-        const variantes =
-          filtro === "todos"
-            ? g.variantes
-            : g.variantes.filter((v) => severidad(v.stock) === (filtro === "bajo" ? "low" : "out"));
-        return { ...g, variantesFiltradas: variantes };
+        const colores = g.colores
+          .map((c) => {
+            const tallas =
+              filtro === "todos"
+                ? c.tallas
+                : c.tallas.filter((v) => severidad(v.stock) === (filtro === "bajo" ? "low" : "out"));
+            return { ...c, tallasFiltradas: tallas };
+          })
+          .filter((c) => filtro === "todos" || c.tallasFiltradas.length > 0);
+        return { ...g, coloresFiltrados: colores };
       })
       .filter((g) => {
         if (busqueda && !g.nombre.toLowerCase().includes(busqueda.toLowerCase())) return false;
-        if (filtro !== "todos" && g.variantesFiltradas.length === 0) return false;
+        if (filtro !== "todos" && g.coloresFiltrados.length === 0) return false;
         return true;
       });
   }, [grupos, busqueda, filtro]);
@@ -149,6 +208,15 @@ export default function InventarioPage() {
       const next = new Set(prev);
       if (next.has(nombre)) next.delete(nombre);
       else next.add(nombre);
+      return next;
+    });
+  };
+
+  const toggleColorAbierto = (clave: string) => {
+    setColoresAbiertos((prev) => {
+      const next = new Set(prev);
+      if (next.has(clave)) next.delete(clave);
+      else next.add(clave);
       return next;
     });
   };
@@ -355,13 +423,9 @@ export default function InventarioPage() {
           {gruposVisibles.map((g) => {
             const abierto = abiertos.has(g.nombre);
             const total = g.variantes.reduce((s, v) => s + v.stock, 0);
-            const peor = g.variantes.reduce<Severidad>((peorActual, v) => {
-              const s = severidad(v.stock);
-              const rango: Record<Severidad, number> = { ok: 2, low: 1, out: 0 };
-              return rango[s] < rango[peorActual] ? s : peorActual;
-            }, "ok");
+            const peor = severidadGrupo(g.variantes);
             const pct = Math.min(100, Math.round((total / (CAP * g.variantes.length)) * 100));
-            const lista = filtro === "todos" ? g.variantes : g.variantesFiltradas;
+            const colores = g.coloresFiltrados;
 
             return (
               <div key={g.nombre} className="bg-card border border-borderLight rounded-xl overflow-hidden">
@@ -379,7 +443,8 @@ export default function InventarioPage() {
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-ink2 truncate">{g.nombre}</p>
                     <p className="text-xs text-muted2">
-                      {g.variantes.length} variante{g.variantes.length > 1 ? "s" : ""}
+                      {g.colores.length} color{g.colores.length > 1 ? "es" : ""} · {g.variantes.length} variante
+                      {g.variantes.length > 1 ? "s" : ""}
                     </p>
                   </div>
                   <span className={`hidden sm:inline-block text-xs font-medium px-2.5 py-1 rounded-full shrink-0 ${SEVERIDAD_PILL[peor]}`}>
@@ -402,50 +467,78 @@ export default function InventarioPage() {
 
                 {abierto && (
                   <div className="border-t border-borderLight">
-                    {lista.map((p) => {
-                      const sev = severidad(p.stock);
-                      const pctV = Math.min(100, Math.round((p.stock / CAP) * 100));
+                    {colores.map((c) => {
+                      const claveColor = `${g.nombre}__${c.color}`;
+                      const colorAbierto = coloresAbiertos.has(claveColor);
+                      const totalColor = c.tallas.reduce((s, v) => s + v.stock, 0);
+                      const peorColor = severidadGrupo(c.tallas);
+                      const pctColor = Math.min(100, Math.round((totalColor / (CAP * c.tallas.length)) * 100));
+                      const tallas = c.tallasFiltradas;
+
                       return (
-                        <div
-                          key={p.id}
-                          className="grid grid-cols-1 sm:grid-cols-[minmax(0,1.3fr)_minmax(140px,1fr)_90px_80px] gap-2 sm:gap-4 items-center px-4 sm:px-5 sm:pl-16 py-3 border-t border-borderLight first:border-t-0"
-                        >
-                          <p className="text-sm font-medium text-ink2 flex items-center">
-                            <span
-                              className="inline-block w-2.5 h-2.5 rounded-full mr-2 border border-black/10 shrink-0"
-                              style={{ backgroundColor: colorPunto(p.variante) }}
+                        <div key={c.color} className="border-t border-borderLight first:border-t-0">
+                          <button
+                            onClick={() => toggleColorAbierto(claveColor)}
+                            className="w-full flex items-center gap-3 pl-8 pr-4 sm:pl-12 sm:pr-5 py-3 hover:bg-paper transition-colors text-left"
+                          >
+                            <ChevronRight
+                              size={14}
+                              className={`text-muted2 shrink-0 transition-transform ${colorAbierto ? "rotate-90" : ""}`}
                             />
-                            {p.variante || "Único"}
-                          </p>
-                          <div className="flex items-center gap-2.5">
-                            <div className="flex-1 h-2 rounded-full bg-paper overflow-hidden">
-                              <div
-                                className={`h-full ${SEVERIDAD_BARRA[sev]}`}
-                                style={{ width: `${pctV}%` }}
-                              />
-                            </div>
-                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${SEVERIDAD_PILL[sev]}`}>
-                              {SEVERIDAD_LABEL[sev]}
-                            </span>
-                          </div>
-                          <input
-                            type="number"
-                            value={nuevoStock[p.id] ?? String(p.stock)}
-                            onChange={(e) =>
-                              setNuevoStock((prev) => ({ ...prev, [p.id]: e.target.value }))
-                            }
-                            onBlur={() => guardarStock(p.id)}
-                            className={`${inputCls} w-20 text-center tabular-nums`}
-                          />
-                          <div className="text-left sm:text-right">
                             <span
-                              className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                                p.activo ? "bg-greenSoft text-green" : "bg-paper text-muted2"
-                              }`}
-                            >
-                              {p.activo ? "Activo" : "Inactivo"}
+                              className="inline-block w-3 h-3 rounded-full border border-black/10 shrink-0"
+                              style={{ backgroundColor: colorPunto(c.color) }}
+                            />
+                            <p className="text-sm font-medium text-ink2 flex-1 min-w-0 truncate">{c.color}</p>
+                            <span className={`hidden sm:inline-block text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${SEVERIDAD_PILL[peorColor]}`}>
+                              {SEVERIDAD_LABEL[peorColor]}
                             </span>
-                          </div>
+                            <div className="hidden sm:block w-16 sm:w-20 shrink-0">
+                              <div className="h-1.5 rounded-full bg-paper overflow-hidden">
+                                <div className={`h-full ${SEVERIDAD_BARRA[peorColor]}`} style={{ width: `${pctColor}%` }} />
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0 w-14">
+                              <p className="font-semibold text-ink2 text-sm tabular-nums">{totalColor}</p>
+                              <p className="text-[10px] text-muted2">unidades</p>
+                            </div>
+                          </button>
+
+                          {colorAbierto && (
+                            <div className="flex flex-wrap gap-2 border-t border-borderLight bg-paper px-4 sm:pl-12 sm:pr-5 py-3">
+                              {tallas.map((p) => {
+                                const sev = severidad(p.stock);
+                                const pctV = Math.min(100, Math.round((p.stock / CAP) * 100));
+                                return (
+                                  <div
+                                    key={p.id}
+                                    className="flex items-center gap-2 bg-white border border-borderLight rounded-lg px-2.5 py-2 min-w-[150px]"
+                                  >
+                                    <span className="text-xs font-bold text-muted2 w-6 text-center shrink-0">
+                                      {p.talla || "Único"}
+                                    </span>
+                                    <div className="w-9 h-1.5 rounded-full bg-paper overflow-hidden shrink-0">
+                                      <div className={`h-full ${SEVERIDAD_BARRA[sev]}`} style={{ width: `${pctV}%` }} />
+                                    </div>
+                                    <input
+                                      type="number"
+                                      value={nuevoStock[p.id] ?? String(p.stock)}
+                                      onChange={(e) =>
+                                        setNuevoStock((prev) => ({ ...prev, [p.id]: e.target.value }))
+                                      }
+                                      onBlur={() => guardarStock(p.id)}
+                                      className="w-14 text-center text-sm tabular-nums bg-white border border-borderLight rounded-md px-1 py-1 focus:outline-none focus:ring-1 focus:ring-accent"
+                                    />
+                                    {!p.activo && (
+                                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-paper text-muted2 shrink-0">
+                                        Inactivo
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
