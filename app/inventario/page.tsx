@@ -80,7 +80,6 @@ export default function InventarioPage() {
   const [busqueda, setBusqueda] = useState("");
   const [filtro, setFiltro] = useState<(typeof FILTROS)[number]["key"]>("todos");
   const [abiertos, setAbiertos] = useState<Set<string>>(new Set());
-  const [expandidoInicializado, setExpandidoInicializado] = useState(false);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -115,17 +114,6 @@ export default function InventarioPage() {
       .map(([nombre, variantes]) => ({ nombre, variantes }))
       .sort((a, b) => a.nombre.localeCompare(b.nombre));
   }, [productos]);
-
-  // Al cargar, expande automáticamente los productos que tienen algo por
-  // atender (bajo/agotado) y deja colapsados los que están sanos.
-  useEffect(() => {
-    if (expandidoInicializado || grupos.length === 0) return;
-    const conAlerta = grupos
-      .filter((g) => g.variantes.some((v) => severidad(v.stock) !== "ok"))
-      .map((g) => g.nombre);
-    setAbiertos(new Set(conAlerta));
-    setExpandidoInicializado(true);
-  }, [grupos, expandidoInicializado]);
 
   const stats = useMemo(() => {
     let ok = 0,
