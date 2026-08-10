@@ -431,35 +431,35 @@ export default function InventarioPage() {
               <div key={g.nombre} className="bg-card border border-borderLight rounded-xl overflow-hidden">
                 <button
                   onClick={() => toggleAbierto(g.nombre)}
-                  className="w-full flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-4 hover:bg-paper transition-colors text-left"
+                  className="w-full flex items-start gap-3 sm:gap-4 px-4 sm:px-5 py-4 hover:bg-paper transition-colors text-left"
                 >
                   <ChevronRight
                     size={16}
-                    className={`text-muted2 shrink-0 transition-transform ${abierto ? "rotate-90" : ""}`}
+                    className={`text-muted2 shrink-0 transition-transform mt-1 ${abierto ? "rotate-90" : ""}`}
                   />
                   <div className="w-9 h-9 rounded-lg bg-purpleSoft text-purple flex items-center justify-center shrink-0">
                     <Layers size={16} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-ink2 truncate">{g.nombre}</p>
+                    <p className="font-semibold text-ink2 break-words">{g.nombre}</p>
                     <p className="text-xs text-muted2">
                       {g.colores.length} color{g.colores.length > 1 ? "es" : ""} · {g.variantes.length} variante
                       {g.variantes.length > 1 ? "s" : ""}
                     </p>
                   </div>
-                  <span className={`hidden sm:inline-block text-xs font-medium px-2.5 py-1 rounded-full shrink-0 ${SEVERIDAD_PILL[peor]}`}>
+                  <span className={`hidden sm:inline-block self-center text-xs font-medium px-2.5 py-1 rounded-full shrink-0 ${SEVERIDAD_PILL[peor]}`}>
                     {peor === "out"
                       ? "Agotados en la mezcla"
                       : peor === "low"
                       ? "Stock bajo en la mezcla"
                       : "Todo sano"}
                   </span>
-                  <div className="hidden md:block w-28 shrink-0">
+                  <div className="hidden md:block self-center w-28 shrink-0">
                     <div className="h-1.5 rounded-full bg-paper overflow-hidden">
                       <div className={`h-full ${SEVERIDAD_BARRA[peor]}`} style={{ width: `${pct}%` }} />
                     </div>
                   </div>
-                  <div className="text-right shrink-0 w-16">
+                  <div className="text-right self-center shrink-0 w-16">
                     <p className="font-semibold text-ink2 tabular-nums">{total}</p>
                     <p className="text-[11px] text-muted2">unidades</p>
                   </div>
