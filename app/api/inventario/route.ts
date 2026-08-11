@@ -27,12 +27,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "El nombre es obligatorio" }, { status: 400 });
     }
 
-    const producto = await prisma.producto.create({
-      data: {
-        nombre,
-        variante: variante || null,
-        stock: stock ? Number(stock) : 0,
-      },
+    const stockInicial = stock ? Number(stock) : 0;
+
+    const producto = await prisma.$transaction(async (tx) => {
+      const creado = await tx.producto.create({
+        data: {
+          nombre,
+          variante: variante || null,
+          stock: stockInicial,
+        },
+      });
+
+      if (stockInicial !== 0) {
+        await tx.movimientoInventario.create({
+          data: {
+            productoId: creado.id,
+            cantidad: stockInicial,
+            motivo: "ALTA_PRODUCTO",
+          },
+        });
+      }
+
+      return creado;
     });
 
     return NextResponse.json(producto, { status: 201 });

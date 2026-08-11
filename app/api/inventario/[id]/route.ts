@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 
 export async function PATCH(
   req: NextRequest,
@@ -7,7 +8,7 @@ export async function PATCH(
 ) {
   try {
     const body = await req.json();
-    const { nombre, variante, stock, activo } = body;
+    const { nombre, variante, stock, activo, notas } = body;
 
     const data: Record<string, unknown> = {};
     if (nombre !== undefined) data.nombre = nombre;
@@ -15,9 +16,28 @@ export async function PATCH(
     if (stock !== undefined) data.stock = Number(stock);
     if (activo !== undefined) data.activo = Boolean(activo);
 
-    const producto = await prisma.producto.update({
-      where: { id: params.id },
-      data,
+    const producto = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const anterior = await tx.producto.findUnique({ where: { id: params.id } });
+      const actualizado = await tx.producto.update({
+        where: { id: params.id },
+        data,
+      });
+
+      if (stock !== undefined && anterior) {
+        const delta = actualizado.stock - anterior.stock;
+        if (delta !== 0) {
+          await tx.movimientoInventario.create({
+            data: {
+              productoId: params.id,
+              cantidad: delta,
+              motivo: "AJUSTE_MANUAL",
+              notas: notas || null,
+            },
+          });
+        }
+      }
+
+      return actualizado;
     });
 
     return NextResponse.json(producto);

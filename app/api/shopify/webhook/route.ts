@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
         },
         include: { productos: true },
       });
-      await ajustarStockPedido(tx, null, nuevoPedido);
+      await ajustarStockPedido(tx, null, nuevoPedido, "WEBHOOK_SHOPIFY");
       await upsertClienteDesdePedido(tx, nuevoPedido);
       return nuevoPedido;
     });

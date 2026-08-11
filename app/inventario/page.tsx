@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Package, Plus, RefreshCw, Search, ChevronRight, Layers } from "lucide-react";
+import { Package, Plus, RefreshCw, Search, ChevronRight, Layers, History, X } from "lucide-react";
 
 type Producto = {
   id: string;
@@ -10,6 +10,35 @@ type Producto = {
   stock: number;
   activo: boolean;
 };
+
+type MovimientoInventario = {
+  id: string;
+  cantidad: number;
+  motivo: string;
+  notas: string | null;
+  creadoEn: string;
+  pedido: { id: string; numeroOrden: string | null; cliente: string | null; telefono: string } | null;
+};
+
+const MOTIVO_LABEL: Record<string, string> = {
+  PEDIDO_CREADO: "Pedido creado",
+  PEDIDO_EDITADO: "Pedido editado",
+  PEDIDO_ELIMINADO: "Pedido eliminado",
+  IMPORTACION_SHOPIFY: "Sincronización con Shopify",
+  WEBHOOK_SHOPIFY: "Pedido nuevo de Shopify",
+  AJUSTE_MANUAL: "Ajuste manual",
+  ALTA_PRODUCTO: "Alta de producto",
+  REINICIO: "Reinicio de inventario",
+};
+
+const fmtFechaHora = (iso: string) =>
+  new Date(iso).toLocaleString("es-CO", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
 type Severidad = "ok" | "low" | "out";
 
@@ -119,6 +148,23 @@ export default function InventarioPage() {
   const [filtro, setFiltro] = useState<(typeof FILTROS)[number]["key"]>("todos");
   const [abiertos, setAbiertos] = useState<Set<string>>(new Set());
   const [coloresAbiertos, setColoresAbiertos] = useState<Set<string>>(new Set());
+  const [historialProducto, setHistorialProducto] = useState<Producto | null>(null);
+  const [movimientos, setMovimientos] = useState<MovimientoInventario[]>([]);
+  const [cargandoMovimientos, setCargandoMovimientos] = useState(false);
+
+  const abrirHistorial = useCallback(async (p: Producto) => {
+    setHistorialProducto(p);
+    setCargandoMovimientos(true);
+    try {
+      const res = await fetch(`/api/inventario/${p.id}/movimientos`);
+      if (!res.ok) throw new Error();
+      setMovimientos(await res.json());
+    } catch {
+      setMovimientos([]);
+    } finally {
+      setCargandoMovimientos(false);
+    }
+  }, []);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -529,6 +575,14 @@ export default function InventarioPage() {
                                       onBlur={() => guardarStock(p.id)}
                                       className="w-14 text-center text-sm tabular-nums bg-white border border-borderLight rounded-md px-1 py-1 focus:outline-none focus:ring-1 focus:ring-accent"
                                     />
+                                    <button
+                                      type="button"
+                                      onClick={() => abrirHistorial(p)}
+                                      title="Ver historial de movimientos"
+                                      className="text-muted2 hover:text-accent transition-colors shrink-0"
+                                    >
+                                      <History size={14} />
+                                    </button>
                                     {!p.activo && (
                                       <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-paper text-muted2 shrink-0">
                                         Inactivo
@@ -547,6 +601,69 @@ export default function InventarioPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {historialProducto && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+          onClick={() => setHistorialProducto(null)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between p-4 border-b border-borderLight">
+              <div>
+                <h2 className="text-base font-semibold text-ink2">Historial de movimientos</h2>
+                <p className="text-xs text-muted2">
+                  {historialProducto.nombre}
+                  {historialProducto.variante ? ` · ${historialProducto.variante}` : ""} — stock actual:{" "}
+                  {historialProducto.stock}
+                </p>
+              </div>
+              <button
+                onClick={() => setHistorialProducto(null)}
+                className="text-muted2 hover:text-ink2 shrink-0"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="overflow-y-auto p-4 space-y-2">
+              {cargandoMovimientos ? (
+                <p className="text-sm text-muted2">Cargando…</p>
+              ) : movimientos.length === 0 ? (
+                <p className="text-sm text-muted2">Sin movimientos registrados todavía.</p>
+              ) : (
+                movimientos.map((m) => (
+                  <div
+                    key={m.id}
+                    className="flex items-start justify-between gap-3 border border-borderLight rounded-md px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm text-ink2">{MOTIVO_LABEL[m.motivo] || m.motivo}</p>
+                      {m.pedido && (
+                        <p className="text-xs text-muted2 truncate">
+                          Pedido {m.pedido.numeroOrden ? `#${m.pedido.numeroOrden}` : m.pedido.id} ·{" "}
+                          {m.pedido.cliente || m.pedido.telefono}
+                        </p>
+                      )}
+                      {m.notas && <p className="text-xs text-muted2 truncate">{m.notas}</p>}
+                      <p className="text-[10px] text-muted2">{fmtFechaHora(m.creadoEn)}</p>
+                    </div>
+                    <span
+                      className={`text-sm font-semibold tabular-nums shrink-0 ${
+                        m.cantidad > 0 ? "text-green" : "text-red"
+                      }`}
+                    >
+                      {m.cantidad > 0 ? "+" : ""}
+                      {m.cantidad}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
       )}
     </main>

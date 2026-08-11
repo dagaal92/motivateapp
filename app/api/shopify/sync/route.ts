@@ -78,7 +78,7 @@ export async function POST() {
           data: { ...pedidoData, productos: { create: productosConId } },
           include: { productos: true },
         });
-        await ajustarStockPedido(tx, null, nuevoPedido);
+        await ajustarStockPedido(tx, null, nuevoPedido, "IMPORTACION_SHOPIFY");
         await upsertClienteDesdePedido(tx, nuevoPedido);
       });
       creados++;

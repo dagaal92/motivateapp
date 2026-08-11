@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
       }
 
       await ajustarIngresoPedido(tx, null, nuevoPedido);
-      await ajustarStockPedido(tx, null, nuevoPedido);
+      await ajustarStockPedido(tx, null, nuevoPedido, "PEDIDO_CREADO");
       await upsertClienteDesdePedido(tx, nuevoPedido);
 
       return nuevoPedido;

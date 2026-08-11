@@ -164,7 +164,7 @@ export async function PATCH(
       });
 
       await ajustarIngresoPedido(tx, existente, pedidoActualizado);
-      await ajustarStockPedido(tx, existente, pedidoActualizado);
+      await ajustarStockPedido(tx, existente, pedidoActualizado, "PEDIDO_EDITADO");
       await upsertClienteDesdePedido(tx, pedidoActualizado);
 
       return pedidoActualizado;
@@ -211,7 +211,7 @@ export async function DELETE(
       }
 
       await ajustarIngresoPedido(tx, pedido, null);
-      await ajustarStockPedido(tx, pedido, null);
+      await ajustarStockPedido(tx, pedido, null, "PEDIDO_ELIMINADO");
 
       await tx.pedido.delete({ where: { id: params.id } });
     });

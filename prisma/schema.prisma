@@ -187,8 +187,23 @@ model Producto {
   creadoEn         DateTime @default(now())
   actualizadoEn    DateTime @updatedAt
   lineas           ProductoPedido[]
+  movimientos      MovimientoInventario[]
 
   @@index([nombre])
+}
+
+model MovimientoInventario {
+  id         String   @id @default(cuid())
+  productoId String
+  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  cantidad   Int
+  motivo     String
+  pedidoId   String?
+  notas      String?
+  creadoEn   DateTime @default(now())
+
+  @@index([productoId])
+  @@index([creadoEn])
 }
 
 model FletePedido {
