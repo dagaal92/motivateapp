@@ -6,4 +6,5 @@ export const CUENTAS_BASE = [
   "Dropi",
   "Envia",
   "Lulo",
+  "Trii",
 ] as const;

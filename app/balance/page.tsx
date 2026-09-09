@@ -10,6 +10,7 @@ import {
   Package,
   Truck,
   Leaf,
+  TrendingUp,
   Plus,
   ArrowDownCircle,
   ArrowUpCircle,
@@ -78,6 +79,12 @@ const ICONO_CUENTA: Record<
     bg: "bg-greenSoft",
     fg: "text-green",
     logo: "/logos/lulo.png",
+  },
+  Trii: {
+    icon: TrendingUp,
+    bg: "bg-indigo-100",
+    fg: "text-indigo-600",
+    logo: "",
   },
 };
 
@@ -192,7 +199,7 @@ export default function BalancePage() {
   const inmediato =
     saldoDe("Bancolombia") + saldoDe("Nequi") + saldoDe("Daviplata");
   const parcial = saldoDe("Mercado Pago") + saldoDe("Dropi") + saldoDe("Envia");
-  const noDisponible = saldoDe("Lulo");
+  const noDisponible = saldoDe("Lulo") + saldoDe("Trii");
 
   const registrarMovimiento = async (e: React.FormEvent) => {
     e.preventDefault();
