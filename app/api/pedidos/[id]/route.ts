@@ -6,6 +6,7 @@ import { ajustarIngresoPedido } from "@/lib/balance";
 import { ajustarStockPedido } from "@/lib/inventario";
 import { upsertClienteDesdePedido } from "@/lib/clientes";
 import { normalizarNombre, normalizarTelefono } from "@/lib/normalizar";
+import { ErrorValidacion } from "@/lib/errores";
 
 export async function GET(
   _req: NextRequest,
@@ -47,7 +48,7 @@ export async function PATCH(
         data[key] = value === "" || value === null ? null : Number(value);
       } else if (key === "telefono") {
         const limpio = normalizarTelefono(value as string);
-        if (!limpio) throw new Error("El teléfono no tiene dígitos válidos");
+        if (!limpio) throw new ErrorValidacion("El teléfono no tiene dígitos válidos");
         data[key] = limpio;
       } else if (key === "cliente") {
         data[key] = normalizarNombre(value as string);
@@ -61,7 +62,7 @@ export async function PATCH(
         where: { id: params.id },
         include: { fletes: true, productos: true },
       });
-      if (!existente) throw new Error("Pedido no encontrado");
+      if (!existente) throw new ErrorValidacion("Pedido no encontrado");
 
       if (Array.isArray(productos)) {
         await tx.productoPedido.deleteMany({ where: { pedidoId: params.id } });
@@ -104,7 +105,7 @@ export async function PATCH(
 
       if (huboCambioFlete) {
         if (totalFleteNuevo > 0 && !cuentaFleteIdNueva) {
-          throw new Error("Selecciona de qué billetera sale el flete");
+          throw new ErrorValidacion("Selecciona de qué billetera sale el flete");
         }
 
         // Revierte el efecto anterior sobre la billetera
@@ -135,7 +136,7 @@ export async function PATCH(
             where: { id: cuentaFleteIdNueva },
           });
           if (!cuentaNueva || !BILLETERAS_FLETE.includes(cuentaNueva.nombre as any)) {
-            throw new Error(
+            throw new ErrorValidacion(
               "Billetera inválida para el flete. Debe ser Dropi, Envia o Bancolombia."
             );
           }
@@ -173,8 +174,10 @@ export async function PATCH(
     return NextResponse.json(pedido);
   } catch (error) {
     console.error(error);
-    const mensaje = error instanceof Error ? error.message : "No se pudo actualizar el pedido";
-    return NextResponse.json({ error: mensaje }, { status: 400 });
+    if (error instanceof ErrorValidacion) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    return NextResponse.json({ error: "No se pudo actualizar el pedido" }, { status: 500 });
   }
 }
 
@@ -188,7 +191,7 @@ export async function DELETE(
         where: { id: params.id },
         include: { fletes: true, productos: true },
       });
-      if (!pedido) throw new Error("Pedido no encontrado");
+      if (!pedido) throw new ErrorValidacion("Pedido no encontrado");
 
       const totalFlete = pedido.fletes.reduce((s, f) => s + f.valor, 0);
       if (pedido.cuentaFleteId && totalFlete > 0) {
@@ -219,7 +222,9 @@ export async function DELETE(
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error(error);
-    const mensaje = error instanceof Error ? error.message : "No se pudo eliminar el pedido";
-    return NextResponse.json({ error: mensaje }, { status: 400 });
+    if (error instanceof ErrorValidacion) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    return NextResponse.json({ error: "No se pudo eliminar el pedido" }, { status: 500 });
   }
 }

@@ -118,10 +118,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error(error);
     return NextResponse.json(
-      {
-        error: "No se pudo generar el PDF de etiquetas",
-        detalle: error instanceof Error ? error.message : String(error),
-      },
+      { error: "No se pudo generar el PDF de etiquetas" },
       { status: 500 }
     );
   }
