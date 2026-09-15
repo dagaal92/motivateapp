@@ -13,7 +13,16 @@ export async function PATCH(
     const data: Record<string, unknown> = {};
     if (nombre !== undefined) data.nombre = nombre;
     if (variante !== undefined) data.variante = variante || null;
-    if (stock !== undefined) data.stock = Number(stock);
+    if (stock !== undefined) {
+      const stockNum = Number(stock);
+      if (!Number.isFinite(stockNum) || stockNum < 0) {
+        return NextResponse.json(
+          { error: "El stock no puede ser negativo" },
+          { status: 400 }
+        );
+      }
+      data.stock = stockNum;
+    }
     if (activo !== undefined) data.activo = Boolean(activo);
 
     const producto = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {

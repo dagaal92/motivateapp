@@ -28,6 +28,12 @@ export async function POST(req: NextRequest) {
     }
 
     const stockInicial = stock ? Number(stock) : 0;
+    if (!Number.isFinite(stockInicial) || stockInicial < 0) {
+      return NextResponse.json(
+        { error: "El stock inicial no puede ser negativo" },
+        { status: 400 }
+      );
+    }
 
     const producto = await prisma.$transaction(async (tx) => {
       const creado = await tx.producto.create({
