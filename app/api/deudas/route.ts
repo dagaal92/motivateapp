@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { LIMITE_LISTADO_SEGURIDAD } from "@/lib/constantes";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,7 @@ export async function GET() {
 
     const deudas = await prisma.deuda.findMany({
       orderBy: [{ estado: "asc" }, { diaPago: "asc" }],
+      take: LIMITE_LISTADO_SEGURIDAD,
       include: {
         cuenta: { select: { id: true, nombre: true } },
         pagos: {
