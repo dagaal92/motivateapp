@@ -13,6 +13,26 @@ const nextConfig = {
   outputFileTracingIncludes: {
     "/api/preparacion/etiquetas": ["./node_modules/pdfkit/js/data/**"],
   },
+  // Headers de defensa en profundidad que no cambian nada visual ni de
+  // comportamiento (no incluye CSP a propósito: una CSP mal calibrada puede
+  // romper la hidratación de Next o los estilos en línea que ya usa la app).
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains; preload",
+          },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+        ],
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;

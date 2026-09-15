@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { COOKIE_SESION } from "@/lib/auth";
+import { COOKIE_SESION, verificarSesion } from "@/lib/auth";
 
 // El webhook de Shopify lo llama Shopify directamente (no un navegador con
 // sesión) y ya se autentica solo, verificando la firma HMAC en
@@ -14,21 +14,19 @@ const RUTAS_PUBLICAS = [
   "/logo-mark.png",
 ];
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (RUTAS_PUBLICAS.some((ruta) => pathname === ruta || pathname.startsWith(ruta))) {
     return NextResponse.next();
   }
 
   const password = process.env.ADMIN_PASSWORD;
-  if (!password) {
-    // Sin contraseña configurada en el entorno, no bloqueamos: evita dejar
-    // a todos afuera por un despliegue sin la variable puesta todavía.
-    return NextResponse.next();
-  }
-
   const sesion = request.cookies.get(COOKIE_SESION)?.value;
-  if (sesion === password) {
+  // Sin ADMIN_PASSWORD configurada no hay nada contra qué validar: se niega
+  // el acceso (antes esto dejaba pasar a cualquiera sin pedir contraseña).
+  const autenticado = Boolean(password) && (await verificarSesion(sesion, password as string));
+
+  if (autenticado) {
     return NextResponse.next();
   }
 
