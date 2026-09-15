@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Build
+        env:
+          # El build no ejecuta consultas reales a la base de datos (solo
+          # Prisma Client necesita que la variable exista), así que una
+          # cadena de conexión falsa es suficiente para validar el build en CI.
+          DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci"
+          ADMIN_PASSWORD: "ci-placeholder"
+        run: pnpm run build

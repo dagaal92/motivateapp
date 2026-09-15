@@ -67,17 +67,28 @@ export async function POST() {
         principal.ciudad !== ciudad ||
         principal.departamento !== departamento;
 
+      // La actualización del principal y el borrado de sus duplicados deben
+      // quedar juntos: si el borrado fallara después de guardar el cambio,
+      // quedarían datos fusionados a medias (el teléfono ya cambiado, pero
+      // el duplicado todavía ahí).
+      const operaciones = [];
       if (cambia) {
-        await prisma.cliente.update({
-          where: { id: principal.id },
-          data: { telefono: telefonoLimpio, nombre, email, ciudad, departamento },
-        });
-        clientesActualizados++;
+        operaciones.push(
+          prisma.cliente.update({
+            where: { id: principal.id },
+            data: { telefono: telefonoLimpio, nombre, email, ciudad, departamento },
+          })
+        );
       }
-
       if (otros.length > 0) {
-        await prisma.cliente.deleteMany({ where: { id: { in: otros.map((o) => o.id) } } });
-        duplicadosFusionados += otros.length;
+        operaciones.push(
+          prisma.cliente.deleteMany({ where: { id: { in: otros.map((o) => o.id) } } })
+        );
+      }
+      if (operaciones.length > 0) {
+        await prisma.$transaction(operaciones);
+        if (cambia) clientesActualizados++;
+        if (otros.length > 0) duplicadosFusionados += otros.length;
       }
     }
 
