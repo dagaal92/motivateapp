@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { capturarError } from "@/lib/sentry";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,7 @@ export async function GET(
 
     return NextResponse.json(resultado);
   } catch (error) {
-    console.error(error);
+    capturarError(error);
     return NextResponse.json(
       { error: "No se pudieron cargar los movimientos" },
       { status: 500 }

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { mapPedidoData, type ShopifyOrder } from "@/lib/shopify";
 import { ajustarStockPedido, resolverProductosShopify } from "@/lib/inventario";
 import { upsertClienteDesdePedido } from "@/lib/clientes";
+import { capturarError } from "@/lib/sentry";
 
 export async function POST() {
   const domain = process.env.SHOPIFY_STORE_DOMAIN;
@@ -96,7 +97,7 @@ export async function POST() {
 
     return NextResponse.json({ creados, existentes, total: data.orders.length, sinCoincidencia });
   } catch (error) {
-    console.error(error);
+    capturarError(error);
     return NextResponse.json(
       { error: "No se pudo sincronizar con Shopify" },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { rangoHoyColombia } from "@/lib/fechas";
 import { GENERAL_LISTO_PARA_PREPARAR } from "@/lib/preparacion";
+import { capturarError } from "@/lib/sentry";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ export async function GET() {
 
     return NextResponse.json({ pendientes, preparadosHoy });
   } catch (error) {
-    console.error(error);
+    capturarError(error);
     return NextResponse.json(
       { error: "No se pudo cargar la preparación de pedidos" },
       { status: 500 }

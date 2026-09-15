@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { capturarError } from "@/lib/sentry";
 
 type ShopifyVariant = { id: number; title: string };
 type ShopifyProduct = { id: number; title: string; status: string; variants: ShopifyVariant[] };
@@ -80,7 +81,7 @@ export async function POST() {
 
     return NextResponse.json({ creados, actualizados, desactivados, total: vistos.length });
   } catch (error) {
-    console.error(error);
+    capturarError(error);
     return NextResponse.json(
       { error: "No se pudo importar el catálogo de Shopify" },
       { status: 500 }

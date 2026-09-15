@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { COOKIE_SESION, COOKIE_MAX_AGE, crearSesion } from "@/lib/auth";
 import { intentosExcedidos, registrarIntentoFallido, limpiarIntentos } from "@/lib/rateLimitLogin";
+import { capturarError } from "@/lib/sentry";
 
 function obtenerIp(req: NextRequest): string {
   return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "desconocida";
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
     });
     return res;
   } catch (error) {
-    console.error(error);
+    capturarError(error);
     return NextResponse.json({ error: "No se pudo iniciar sesión" }, { status: 400 });
   }
 }

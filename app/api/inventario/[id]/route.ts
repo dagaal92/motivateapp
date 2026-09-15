@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
+import { capturarError } from "@/lib/sentry";
 
 export async function PATCH(
   req: NextRequest,
@@ -51,7 +52,7 @@ export async function PATCH(
 
     return NextResponse.json(producto);
   } catch (error) {
-    console.error(error);
+    capturarError(error);
     return NextResponse.json(
       { error: "No se pudo actualizar el producto" },
       { status: 400 }

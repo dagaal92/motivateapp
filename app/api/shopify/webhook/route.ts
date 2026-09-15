@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { mapPedidoData, type ShopifyOrder } from "@/lib/shopify";
 import { ajustarStockPedido, resolverProductosShopify } from "@/lib/inventario";
 import { upsertClienteDesdePedido } from "@/lib/clientes";
+import { capturarError } from "@/lib/sentry";
 
 function verificarFirma(rawBody: string, hmacHeader: string | null, secret: string) {
   if (!hmacHeader) return false;
@@ -64,7 +65,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, id: pedido.id }, { status: 201 });
   } catch (error) {
-    console.error(error);
+    capturarError(error);
     return NextResponse.json({ error: "No se pudo crear el pedido" }, { status: 500 });
   }
 }

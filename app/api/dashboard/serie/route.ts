@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { rangoAnioColombia } from "@/lib/fechas";
+import { capturarError } from "@/lib/sentry";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
     const meses = conteos.map((totalPedidos, i) => ({ mes: i + 1, totalPedidos }));
     return NextResponse.json({ anio, meses });
   } catch (error) {
-    console.error(error);
+    capturarError(error);
     return NextResponse.json(
       { error: "No se pudo cargar la serie mensual" },
       { status: 500 }

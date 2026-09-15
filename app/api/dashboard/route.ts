@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { rangoMesColombia, rangoAnioColombia } from "@/lib/fechas";
+import { capturarError } from "@/lib/sentry";
 
 export const dynamic = "force-dynamic";
 
@@ -53,7 +54,7 @@ export async function GET(req: NextRequest) {
       totalFletes,
     });
   } catch (error) {
-    console.error(error);
+    capturarError(error);
     return NextResponse.json(
       { error: "No se pudo cargar el dashboard" },
       { status: 500 }

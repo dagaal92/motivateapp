@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { Prisma, CuotaDeuda } from "@prisma/client";
+import { capturarError } from "@/lib/sentry";
 
 export const dynamic = "force-dynamic";
 
@@ -153,7 +154,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     return NextResponse.json(resultado, { status: 201 });
   } catch (error) {
-    console.error(error);
+    capturarError(error);
     return NextResponse.json({ error: "No se pudo registrar el pago" }, { status: 500 });
   }
 }
@@ -167,7 +168,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     });
     return NextResponse.json(pagos);
   } catch (error) {
-    console.error(error);
+    capturarError(error);
     return NextResponse.json({ error: "No se pudieron cargar los pagos" }, { status: 500 });
   }
 }
