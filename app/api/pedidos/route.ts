@@ -7,6 +7,7 @@ import { ajustarStockPedido } from "@/lib/inventario";
 import { upsertClienteDesdePedido } from "@/lib/clientes";
 import { normalizarNombre, normalizarTelefono } from "@/lib/normalizar";
 import { ErrorValidacion } from "@/lib/errores";
+import { LIMITE_LISTADO_SEGURIDAD } from "@/lib/constantes";
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,6 +15,7 @@ export async function GET(req: NextRequest) {
     const pedidos = await prisma.pedido.findMany({
       where: telefono ? { telefono } : undefined,
       orderBy: { creadoEn: "desc" },
+      take: LIMITE_LISTADO_SEGURIDAD,
     });
     return NextResponse.json(pedidos);
   } catch (error) {

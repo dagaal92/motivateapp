@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { LIMITE_LISTADO_SEGURIDAD } from "@/lib/constantes";
 
 export const dynamic = "force-dynamic";
 
@@ -7,6 +8,7 @@ export async function GET() {
   try {
     const productos = await prisma.producto.findMany({
       orderBy: [{ nombre: "asc" }, { variante: "asc" }],
+      take: LIMITE_LISTADO_SEGURIDAD,
     });
     return NextResponse.json(productos);
   } catch (error) {
