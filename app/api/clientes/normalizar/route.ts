@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { normalizarNombre, normalizarTelefono } from "@/lib/normalizar";
+import { capturarError } from "@/lib/sentry";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -98,7 +99,7 @@ export async function POST() {
       duplicadosFusionados,
     });
   } catch (error) {
-    console.error(error);
+    capturarError(error);
     return NextResponse.json(
       { error: "No se pudo normalizar la información" },
       { status: 500 }

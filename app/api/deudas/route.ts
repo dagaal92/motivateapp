@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { LIMITE_LISTADO_SEGURIDAD } from "@/lib/constantes";
+import { capturarError } from "@/lib/sentry";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +29,7 @@ export async function GET() {
 
     return NextResponse.json(deudas);
   } catch (error) {
-    console.error(error);
+    capturarError(error);
     return NextResponse.json(
       { error: "No se pudieron cargar las deudas" },
       { status: 500 }
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(deuda, { status: 201 });
   } catch (error) {
-    console.error(error);
+    capturarError(error);
     return NextResponse.json({ error: "No se pudo crear la deuda" }, { status: 500 });
   }
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { capturarError } from "@/lib/sentry";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     return NextResponse.json(deuda);
   } catch (error) {
-    console.error(error);
+    capturarError(error);
     return NextResponse.json({ error: "No se pudo actualizar la deuda" }, { status: 500 });
   }
 }
@@ -41,7 +42,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     await prisma.deuda.delete({ where: { id: params.id } });
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error(error);
+    capturarError(error);
     return NextResponse.json({ error: "No se pudo eliminar la deuda" }, { status: 500 });
   }
 }

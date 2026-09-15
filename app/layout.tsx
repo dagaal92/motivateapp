@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Oswald, Inter, JetBrains_Mono } from "next/font/google";
 import Sidebar from "@/components/Sidebar";
+import SentryInit from "@/components/SentryInit";
 import "./globals.css";
 
 const display = Oswald({
@@ -34,6 +35,7 @@ export default function RootLayout({
       <body
         className={`${display.variable} ${body.variable} ${mono.variable} font-body bg-paper text-ink2 min-h-screen`}
       >
+        <SentryInit />
         <div className="flex flex-col md:flex-row">
           <Sidebar />
           <div className="flex-1 min-w-0">{children}</div>

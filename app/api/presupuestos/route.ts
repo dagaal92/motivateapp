@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { rangoMesColombia } from "@/lib/fechas";
+import { capturarError } from "@/lib/sentry";
 
 export const dynamic = "force-dynamic";
 
@@ -66,7 +67,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ anio, mes, gastos, ingresos, sinCategorizar });
   } catch (error) {
-    console.error(error);
+    capturarError(error);
     return NextResponse.json(
       { error: "No se pudo cargar el reporte" },
       { status: 500 }
@@ -110,7 +111,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(presupuesto, { status: 201 });
   } catch (error) {
-    console.error(error);
+    capturarError(error);
     return NextResponse.json(
       { error: "No se pudo guardar el presupuesto" },
       { status: 500 }

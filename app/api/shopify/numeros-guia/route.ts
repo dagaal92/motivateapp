@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { capturarError } from "@/lib/sentry";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -113,7 +114,7 @@ export async function POST() {
       manualesVacios,
     });
   } catch (error) {
-    console.error(error);
+    capturarError(error);
     return NextResponse.json(
       { error: "No se pudieron traer los números de guía" },
       { status: 500 }

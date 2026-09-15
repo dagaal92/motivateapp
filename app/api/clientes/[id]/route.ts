@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { normalizarNombre } from "@/lib/normalizar";
+import { capturarError } from "@/lib/sentry";
 
 export async function PATCH(
   req: NextRequest,
@@ -23,7 +24,7 @@ export async function PATCH(
 
     return NextResponse.json(cliente);
   } catch (error) {
-    console.error(error);
+    capturarError(error);
     return NextResponse.json(
       { error: "No se pudo actualizar el cliente" },
       { status: 400 }
@@ -52,7 +53,7 @@ export async function DELETE(
     await prisma.cliente.delete({ where: { id: params.id } });
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error(error);
+    capturarError(error);
     return NextResponse.json(
       { error: "No se pudo eliminar el cliente" },
       { status: 400 }

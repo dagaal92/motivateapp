@@ -15,12 +15,13 @@ const nextConfig = {
   },
   // Headers de defensa en profundidad. La CSP se calibró revisando qué carga
   // realmente la app: fuentes con next/font (se sirven desde el propio
-  // dominio, no desde Google), un solo <img> a /logos/*.png (mismo origen) y
-  // ningún fetch externo desde el navegador. Se deja 'unsafe-inline' en
-  // script-src (Next inyecta un <script> inline para hidratar la página) y
-  // en style-src (varias barras de progreso usan style={{width}} en línea);
-  // sin eso la app no cargaría. Migrar a nonces para quitar 'unsafe-inline'
-  // es un cambio más grande que se puede hacer después.
+  // dominio, no desde Google), un solo <img> a /logos/*.png (mismo origen) y,
+  // desde que se agregó Sentry, reportes de error hacia *.sentry.io. Se deja
+  // 'unsafe-inline' en script-src (Next inyecta un <script> inline para
+  // hidratar la página) y en style-src (varias barras de progreso usan
+  // style={{width}} en línea); sin eso la app no cargaría. Migrar a nonces
+  // para quitar 'unsafe-inline' es un cambio más grande que se puede hacer
+  // después.
   async headers() {
     return [
       {
@@ -42,7 +43,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data:",
               "font-src 'self' data:",
-              "connect-src 'self'",
+              "connect-src 'self' https://*.sentry.io",
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",

@@ -8,6 +8,7 @@ import { upsertClienteDesdePedido } from "@/lib/clientes";
 import { normalizarNombre, normalizarTelefono } from "@/lib/normalizar";
 import { ErrorValidacion } from "@/lib/errores";
 import { LIMITE_LISTADO_SEGURIDAD } from "@/lib/constantes";
+import { capturarError } from "@/lib/sentry";
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
     });
     return NextResponse.json(pedidos);
   } catch (error) {
-    console.error(error);
+    capturarError(error);
     return NextResponse.json(
       { error: "No se pudieron cargar los pedidos" },
       { status: 500 }
@@ -156,7 +157,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(pedido, { status: 201 });
   } catch (error) {
-    console.error(error);
+    capturarError(error);
     if (error instanceof ErrorValidacion) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
