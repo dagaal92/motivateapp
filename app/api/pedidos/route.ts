@@ -6,6 +6,7 @@ import { ajustarIngresoPedido } from "@/lib/balance";
 import { ajustarStockPedido } from "@/lib/inventario";
 import { upsertClienteDesdePedido } from "@/lib/clientes";
 import { normalizarNombre, normalizarTelefono } from "@/lib/normalizar";
+import { ErrorValidacion } from "@/lib/errores";
 
 export async function GET(req: NextRequest) {
   try {
@@ -83,7 +84,7 @@ export async function POST(req: NextRequest) {
       if (totalFlete > 0) {
         cuenta = await tx.cuenta.findUnique({ where: { id: cuentaFleteId } });
         if (!cuenta || !BILLETERAS_FLETE.includes(cuenta.nombre as any)) {
-          throw new Error(
+          throw new ErrorValidacion(
             "Billetera inválida para el flete. Debe ser Dropi, Envia o Bancolombia."
           );
         }
@@ -154,7 +155,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(pedido, { status: 201 });
   } catch (error) {
     console.error(error);
-    const mensaje = error instanceof Error ? error.message : "No se pudo crear el pedido";
-    return NextResponse.json({ error: mensaje }, { status: 400 });
+    if (error instanceof ErrorValidacion) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    return NextResponse.json({ error: "No se pudo crear el pedido" }, { status: 500 });
   }
 }

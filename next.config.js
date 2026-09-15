@@ -13,9 +13,14 @@ const nextConfig = {
   outputFileTracingIncludes: {
     "/api/preparacion/etiquetas": ["./node_modules/pdfkit/js/data/**"],
   },
-  // Headers de defensa en profundidad que no cambian nada visual ni de
-  // comportamiento (no incluye CSP a propósito: una CSP mal calibrada puede
-  // romper la hidratación de Next o los estilos en línea que ya usa la app).
+  // Headers de defensa en profundidad. La CSP se calibró revisando qué carga
+  // realmente la app: fuentes con next/font (se sirven desde el propio
+  // dominio, no desde Google), un solo <img> a /logos/*.png (mismo origen) y
+  // ningún fetch externo desde el navegador. Se deja 'unsafe-inline' en
+  // script-src (Next inyecta un <script> inline para hidratar la página) y
+  // en style-src (varias barras de progreso usan style={{width}} en línea);
+  // sin eso la app no cargaría. Migrar a nonces para quitar 'unsafe-inline'
+  // es un cambio más grande que se puede hacer después.
   async headers() {
     return [
       {
@@ -29,6 +34,20 @@ const nextConfig = {
             value: "max-age=63072000; includeSubDomains; preload",
           },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline'",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data:",
+              "font-src 'self' data:",
+              "connect-src 'self'",
+              "frame-ancestors 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+            ].join("; "),
+          },
         ],
       },
     ];
