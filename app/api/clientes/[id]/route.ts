@@ -24,7 +24,7 @@ export async function PATCH(
 
     return NextResponse.json(cliente);
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json(
       { error: "No se pudo actualizar el cliente" },
       { status: 400 }
@@ -53,7 +53,7 @@ export async function DELETE(
     await prisma.cliente.delete({ where: { id: params.id } });
     return NextResponse.json({ ok: true });
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json(
       { error: "No se pudo eliminar el cliente" },
       { status: 400 }

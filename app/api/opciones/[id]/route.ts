@@ -10,7 +10,7 @@ export async function DELETE(
     await prisma.opcionMaestra.delete({ where: { id: params.id } });
     return NextResponse.json({ ok: true });
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json(
       { error: "No se pudo eliminar la opción" },
       { status: 500 }

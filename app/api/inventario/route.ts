@@ -13,7 +13,7 @@ export async function GET() {
     });
     return NextResponse.json(productos);
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json(
       { error: "No se pudo cargar el inventario" },
       { status: 500 }
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(producto, { status: 201 });
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json(
       { error: "No se pudo crear el producto" },
       { status: 500 }

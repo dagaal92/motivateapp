@@ -32,7 +32,7 @@ export async function GET(
 
     return NextResponse.json(resultado);
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json(
       { error: "No se pudieron cargar los movimientos" },
       { status: 500 }

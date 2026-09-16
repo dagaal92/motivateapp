@@ -52,7 +52,7 @@ export async function PATCH(
 
     return NextResponse.json(producto);
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json(
       { error: "No se pudo actualizar el producto" },
       { status: 400 }

@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
       totalFletes,
     });
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json(
       { error: "No se pudo cargar el dashboard" },
       { status: 500 }

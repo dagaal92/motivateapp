@@ -12,7 +12,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     });
     return NextResponse.json(cuotas);
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json({ error: "No se pudo cargar el cronograma" }, { status: 500 });
   }
 }
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     return NextResponse.json(cuota, { status: 201 });
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json({ error: "No se pudo agregar la cuota" }, { status: 500 });
   }
 }

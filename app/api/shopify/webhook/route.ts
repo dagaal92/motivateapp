@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, id: pedido.id }, { status: 201 });
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json({ error: "No se pudo crear el pedido" }, { status: 500 });
   }
 }

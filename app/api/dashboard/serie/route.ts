@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
     const meses = conteos.map((totalPedidos, i) => ({ mes: i + 1, totalPedidos }));
     return NextResponse.json({ anio, meses });
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json(
       { error: "No se pudo cargar la serie mensual" },
       { status: 500 }

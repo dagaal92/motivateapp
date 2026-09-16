@@ -154,7 +154,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     return NextResponse.json(resultado, { status: 201 });
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json({ error: "No se pudo registrar el pago" }, { status: 500 });
   }
 }
@@ -168,7 +168,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     });
     return NextResponse.json(pagos);
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json({ error: "No se pudieron cargar los pagos" }, { status: 500 });
   }
 }
