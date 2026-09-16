@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { capturarError } from "@/lib/sentry";
+import { esGuiaValida, limpiarGuia } from "@/lib/guia";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -8,20 +9,11 @@ export const maxDuration = 60;
 type FulfillmentShopify = { tracking_number: string | null };
 type OrdenConGuia = { id: number; name: string; fulfillments: FulfillmentShopify[] };
 
-const PLACEHOLDERS_GUIA = ["n/a", "na", "-", "sin guia", "singuia", "pendiente", "0", "0000", "000000"];
-const FORMATO_VALIDO = /^[A-Za-z0-9-]{5,30}$/;
 const TAMANO_LOTE = 25;
 // Cada invocación se corta sola bastante antes de cualquier límite de
 // plataforma (Vercel Hobby ya mata funciones a los 10s). El navegador es
 // quien vuelve a llamar automáticamente hasta que no quede nada pendiente.
 const TIEMPO_MAX_MS = 8000;
-
-function limpiarGuia(valor: string | null | undefined): string | null {
-  if (!valor) return null;
-  const limpio = valor.trim();
-  if (!limpio || PLACEHOLDERS_GUIA.includes(limpio.toLowerCase())) return null;
-  return limpio;
-}
 
 const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -81,7 +73,7 @@ export async function POST() {
 
             if (!candidata) {
               vacios.push({ numeroOrden: pedido.numeroOrden, cliente: pedido.cliente });
-            } else if (!FORMATO_VALIDO.test(candidata)) {
+            } else if (!esGuiaValida(candidata)) {
               raros.push({ numeroOrden: pedido.numeroOrden, cliente: pedido.cliente, valor: candidata });
             } else {
               await prisma.pedido.update({ where: { id: pedido.id }, data: { numeroGuia: candidata } });
