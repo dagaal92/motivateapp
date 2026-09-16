@@ -1,5 +1,10 @@
 const NOMBRE_PLANTILLA_GUIA = "compartir_guia";
 const IDIOMA_PLANTILLA_GUIA = "es_CO";
+// La plantilla tiene una imagen de encabezado fija; hay que mandarla en
+// cada envío (WhatsApp no la recuerda de la plantilla aprobada). Si el
+// diseño cambia, solo hay que actualizar este link.
+const IMAGEN_ENCABEZADO_GUIA =
+  "https://cdn.shopify.com/s/files/1/0570/9751/9284/files/Compartir_Guia_de_Envio.jpg?v=1789525931";
 
 /**
  * telefono viene guardado sin indicativo (normalizarTelefono le quita el
@@ -52,6 +57,12 @@ export async function enviarPlantillaGuia(datos: DatosPlantillaGuia): Promise<vo
           name: NOMBRE_PLANTILLA_GUIA,
           language: { code: IDIOMA_PLANTILLA_GUIA },
           components: [
+            {
+              type: "header",
+              parameters: [
+                { type: "image", image: { link: IMAGEN_ENCABEZADO_GUIA } },
+              ],
+            },
             {
               type: "body",
               parameters: [
