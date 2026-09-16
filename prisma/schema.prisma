@@ -53,7 +53,7 @@ model Movimiento {
 }
 
 model Deuda {
-  id             String      @id @default(cuid())
+  id             String       @id @default(cuid())
   nombre         String
   entidad        String?
   montoTotal     Int
@@ -61,11 +61,11 @@ model Deuda {
   cuotaMensual   Int?
   diaPago        Int
   cuentaId       String?
-  cuenta         Cuenta?     @relation(fields: [cuentaId], references: [id])
-  estado         EstadoDeuda @default(ACTIVA)
+  cuenta         Cuenta?      @relation(fields: [cuentaId], references: [id])
+  estado         EstadoDeuda  @default(ACTIVA)
   notas          String?
-  creadoEn       DateTime    @default(now())
-  actualizadoEn  DateTime    @updatedAt
+  creadoEn       DateTime     @default(now())
+  actualizadoEn  DateTime     @updatedAt
   pagos          PagoDeuda[]
   cuotas         CuotaDeuda[]
 
@@ -74,17 +74,17 @@ model Deuda {
 }
 
 model CuotaDeuda {
-  id                String   @id @default(cuid())
-  deudaId           String
-  deuda             Deuda    @relation(fields: [deudaId], references: [id], onDelete: Cascade)
-  numeroCuota       String
-  fechaVencimiento  DateTime
-  capital           Int
-  interes           Int
-  otros             Int      @default(0)
-  total             Int
-  pagada            Boolean  @default(false)
-  creadoEn          DateTime @default(now())
+  id               String   @id @default(cuid())
+  deudaId          String
+  deuda            Deuda    @relation(fields: [deudaId], references: [id], onDelete: Cascade)
+  numeroCuota      String
+  fechaVencimiento DateTime
+  capital          Int
+  interes          Int
+  otros            Int      @default(0)
+  total            Int
+  pagada           Boolean  @default(false)
+  creadoEn         DateTime @default(now())
 
   @@index([deudaId])
 }
@@ -141,18 +141,19 @@ model Pedido {
   departamento   String?
   municipio      String?
 
-  cuentaFleteId  String?
-  cuentaFlete    Cuenta?      @relation("PedidoCuentaFlete", fields: [cuentaFleteId], references: [id])
+  cuentaFleteId String?
+  cuentaFlete   Cuenta? @relation("PedidoCuentaFlete", fields: [cuentaFleteId], references: [id])
 
-  completadoEn   DateTime?
-  impreso        Boolean      @default(false)
+  completadoEn     DateTime?
+  impreso          Boolean   @default(false)
+  guiaNotificadaEn DateTime?
 
-  notas          String?
-  creadoEn       DateTime     @default(now())
-  actualizadoEn  DateTime     @updatedAt
+  notas         String?
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
 
-  productos      ProductoPedido[]
-  fletes         FletePedido[]
+  productos ProductoPedido[]
+  fletes    FletePedido[]
 
   @@index([estado])
   @@index([creadoEn])
@@ -177,15 +178,15 @@ model ProductoPedido {
 }
 
 model Producto {
-  id               String   @id @default(cuid())
+  id               String                 @id @default(cuid())
   shopifyProductId String?
-  shopifyVariantId String?  @unique
+  shopifyVariantId String?                @unique
   nombre           String
   variante         String?
-  stock            Int      @default(0)
-  activo           Boolean  @default(true)
-  creadoEn         DateTime @default(now())
-  actualizadoEn    DateTime @updatedAt
+  stock            Int                    @default(0)
+  activo           Boolean                @default(true)
+  creadoEn         DateTime               @default(now())
+  actualizadoEn    DateTime               @updatedAt
   lineas           ProductoPedido[]
   movimientos      MovimientoInventario[]
 
@@ -230,10 +231,10 @@ model Cliente {
 }
 
 model OpcionMaestra {
-  id       String   @id @default(cuid())
+  id        String   @id @default(cuid())
   categoria String
-  valor    String
-  creadoEn DateTime @default(now())
+  valor     String
+  creadoEn  DateTime @default(now())
 
   @@unique([categoria, valor])
   @@index([categoria])

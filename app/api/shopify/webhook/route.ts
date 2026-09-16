@@ -1,19 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { mapPedidoData, type ShopifyOrder } from "@/lib/shopify";
 import { ajustarStockPedido, resolverProductosShopify } from "@/lib/inventario";
 import { upsertClienteDesdePedido } from "@/lib/clientes";
 import { capturarError } from "@/lib/sentry";
-
-function verificarFirma(rawBody: string, hmacHeader: string | null, secret: string) {
-  if (!hmacHeader) return false;
-  const digest = crypto.createHmac("sha256", secret).update(rawBody, "utf8").digest("base64");
-  const digestBuf = Buffer.from(digest);
-  const headerBuf = Buffer.from(hmacHeader);
-  if (digestBuf.length !== headerBuf.length) return false;
-  return crypto.timingSafeEqual(digestBuf, headerBuf);
-}
+import { verificarFirmaShopify } from "@/lib/shopifyWebhook";
 
 export async function POST(req: NextRequest) {
   const secret = process.env.SHOPIFY_API_SECRET;
@@ -25,7 +16,7 @@ export async function POST(req: NextRequest) {
   const rawBody = await req.text();
   const hmacHeader = req.headers.get("x-shopify-hmac-sha256");
 
-  if (!verificarFirma(rawBody, hmacHeader, secret)) {
+  if (!verificarFirmaShopify(rawBody, hmacHeader, secret)) {
     return NextResponse.json({ error: "Firma inválida" }, { status: 401 });
   }
 

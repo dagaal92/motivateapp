@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { COOKIE_SESION, verificarSesion } from "@/lib/auth";
 
-// El webhook de Shopify lo llama Shopify directamente (no un navegador con
-// sesión) y ya se autentica solo, verificando la firma HMAC en
-// app/api/shopify/webhook/route.ts. Por eso queda fuera de esta contraseña.
+// Los webhooks de Shopify (creación de pedido, fulfillment) los llama
+// Shopify directamente (no un navegador con sesión) y cada uno se autentica
+// solo, verificando su propia firma HMAC. Por eso quedan fuera de esta
+// contraseña; "/api/shopify/webhook" hace match por prefijo, así que cubre
+// también "/api/shopify/webhook/fulfillment".
 const RUTAS_PUBLICAS = [
   "/api/shopify/webhook",
   "/login",
