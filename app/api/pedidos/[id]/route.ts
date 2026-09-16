@@ -23,7 +23,7 @@ export async function GET(
     }
     return NextResponse.json(pedido);
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json(
       { error: "No se pudo cargar el pedido" },
       { status: 500 }
@@ -174,7 +174,7 @@ export async function PATCH(
 
     return NextResponse.json(pedido);
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     if (error instanceof ErrorValidacion) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
@@ -222,7 +222,7 @@ export async function DELETE(
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     if (error instanceof ErrorValidacion) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }

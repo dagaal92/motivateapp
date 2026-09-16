@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ anio, mes, gastos, ingresos, sinCategorizar });
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json(
       { error: "No se pudo cargar el reporte" },
       { status: 500 }
@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(presupuesto, { status: 201 });
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json(
       { error: "No se pudo guardar el presupuesto" },
       { status: 500 }

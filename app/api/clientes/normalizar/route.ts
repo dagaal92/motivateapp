@@ -99,7 +99,7 @@ export async function POST() {
       duplicadosFusionados,
     });
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json(
       { error: "No se pudo normalizar la información" },
       { status: 500 }

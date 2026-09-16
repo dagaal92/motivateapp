@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     });
     return NextResponse.json(pedidos);
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json(
       { error: "No se pudieron cargar los pedidos" },
       { status: 500 }
@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(pedido, { status: 201 });
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     if (error instanceof ErrorValidacion) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }

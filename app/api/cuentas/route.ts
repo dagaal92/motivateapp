@@ -30,7 +30,7 @@ export async function GET() {
 
     return NextResponse.json(ordenadas);
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json(
       { error: "No se pudieron cargar las cuentas" },
       { status: 500 }

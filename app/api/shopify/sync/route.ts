@@ -97,7 +97,7 @@ export async function POST() {
 
     return NextResponse.json({ creados, existentes, total: data.orders.length, sinCoincidencia });
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json(
       { error: "No se pudo sincronizar con Shopify" },
       { status: 500 }

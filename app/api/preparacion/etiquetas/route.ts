@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json(
       { error: "No se pudo generar el PDF de etiquetas" },
       { status: 500 }

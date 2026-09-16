@@ -114,7 +114,7 @@ export async function POST() {
       manualesVacios,
     });
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json(
       { error: "No se pudieron traer los números de guía" },
       { status: 500 }

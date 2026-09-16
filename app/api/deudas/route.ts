@@ -29,7 +29,7 @@ export async function GET() {
 
     return NextResponse.json(deudas);
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json(
       { error: "No se pudieron cargar las deudas" },
       { status: 500 }
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(deuda, { status: 201 });
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json({ error: "No se pudo crear la deuda" }, { status: 500 });
   }
 }

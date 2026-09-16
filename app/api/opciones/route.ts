@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(opciones);
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json(
       { error: "No se pudieron cargar las opciones" },
       { status: 500 }
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
         { status: 409 }
       );
     }
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json(
       { error: "No se pudo crear la opción" },
       { status: 500 }

@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json(
       { error: "No se pudieron cargar los clientes" },
       { status: 500 }

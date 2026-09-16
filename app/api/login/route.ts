@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     });
     return res;
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json({ error: "No se pudo iniciar sesión" }, { status: 400 });
   }
 }

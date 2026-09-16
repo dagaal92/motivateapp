@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     });
     return NextResponse.json(movimientos);
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json(
       { error: "No se pudieron cargar los movimientos" },
       { status: 500 }
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(resultado, { status: 201 });
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json(
       { error: "No se pudo registrar el movimiento" },
       { status: 500 }

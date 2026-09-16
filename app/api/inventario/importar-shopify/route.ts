@@ -81,7 +81,7 @@ export async function POST() {
 
     return NextResponse.json({ creados, actualizados, desactivados, total: vistos.length });
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json(
       { error: "No se pudo importar el catálogo de Shopify" },
       { status: 500 }

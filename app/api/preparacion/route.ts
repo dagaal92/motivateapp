@@ -23,7 +23,7 @@ export async function GET() {
 
     return NextResponse.json({ pendientes, preparadosHoy });
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json(
       { error: "No se pudo cargar la preparación de pedidos" },
       { status: 500 }

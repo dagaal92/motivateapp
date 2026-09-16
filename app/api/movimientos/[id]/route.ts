@@ -24,7 +24,7 @@ export async function PATCH(
 
     return NextResponse.json(movimiento);
   } catch (error) {
-    capturarError(error);
+    await capturarError(error);
     return NextResponse.json(
       { error: "No se pudo actualizar la categoría" },
       { status: 400 }
