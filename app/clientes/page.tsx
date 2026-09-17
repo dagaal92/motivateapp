@@ -12,6 +12,7 @@ import {
   ArrowDown,
   ArrowUpDown,
   Sparkles,
+  Search,
 } from "lucide-react";
 import Pagination from "@/components/Pagination";
 
@@ -83,6 +84,8 @@ export default function ClientesPage() {
   const [resumen, setResumen] = useState<Resumen | null>(null);
   const [total, setTotal] = useState(0);
   const [pagina, setPagina] = useState(1);
+  const [busquedaInput, setBusquedaInput] = useState("");
+  const [busqueda, setBusqueda] = useState("");
   const [sortBy, setSortBy] = useState<"nombre" | "compras">("nombre");
   const [order, setOrder] = useState<"asc" | "desc">("asc");
   const [loading, setLoading] = useState(true);
@@ -105,6 +108,7 @@ export default function ClientesPage() {
         sortBy,
         order,
       });
+      if (busqueda) params.set("buscar", busqueda);
       const res = await fetch(`/api/clientes?${params.toString()}`);
       if (!res.ok) throw new Error();
       const data = await res.json();
@@ -117,11 +121,21 @@ export default function ClientesPage() {
     } finally {
       setLoading(false);
     }
-  }, [pagina, sortBy, order]);
+  }, [pagina, sortBy, order, busqueda]);
 
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  // Espera un momento sin que el usuario escriba antes de buscar, para no
+  // disparar una petición por cada tecla.
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setBusqueda(busquedaInput.trim());
+      setPagina(1);
+    }, 300);
+    return () => clearTimeout(id);
+  }, [busquedaInput]);
 
   const ordenarPor = (campo: "nombre" | "compras") => {
     if (sortBy === campo) {
@@ -279,6 +293,16 @@ export default function ClientesPage() {
         )}
       </div>
 
+      <div className="relative">
+        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted2" />
+        <input
+          value={busquedaInput}
+          onChange={(e) => setBusquedaInput(e.target.value)}
+          placeholder="Buscar por nombre o teléfono…"
+          className="w-full sm:w-80 bg-white border border-borderLight rounded-md pl-9 pr-3 py-2 text-sm text-ink2 placeholder:text-muted2 focus:outline-none focus:ring-1 focus:ring-accent"
+        />
+      </div>
+
       {error && (
         <div className="bg-redSoft text-red text-sm p-4 rounded-md">{error}</div>
       )}
@@ -288,7 +312,9 @@ export default function ClientesPage() {
       ) : (
         <div className="bg-card border border-borderLight rounded-xl overflow-hidden">
           {clientes.length === 0 ? (
-            <p className="text-sm text-muted2 p-5">Aún no hay clientes.</p>
+            <p className="text-sm text-muted2 p-5">
+              {busqueda ? "No hay clientes que coincidan con la búsqueda." : "Aún no hay clientes."}
+            </p>
           ) : (
             <div className="overflow-x-auto">
             <table className="w-full text-sm">

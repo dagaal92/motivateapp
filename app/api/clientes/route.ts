@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
       ? (sortByParam as Ordenable)
       : "nombre";
     const order = req.nextUrl.searchParams.get("order") === "desc" ? "desc" : "asc";
+    const busqueda = (req.nextUrl.searchParams.get("buscar") || "").trim().toLowerCase();
 
     const [clientes, conteos] = await Promise.all([
       prisma.cliente.findMany(),
@@ -35,7 +36,15 @@ export async function GET(req: NextRequest) {
     const recompraPct =
       clientesConCompra > 0 ? (clientesRecompra / clientesConCompra) * 100 : 0;
 
-    conCompras.sort((a, b) => {
+    const filtrados = busqueda
+      ? conCompras.filter(
+          (c) =>
+            (c.nombre || "").toLowerCase().includes(busqueda) ||
+            c.telefono.toLowerCase().includes(busqueda)
+        )
+      : conCompras;
+
+    filtrados.sort((a, b) => {
       let cmp = 0;
       if (sortBy === "compras") {
         cmp = a.compras - b.compras;
@@ -47,9 +56,9 @@ export async function GET(req: NextRequest) {
       return order === "desc" ? -cmp : cmp;
     });
 
-    const total = conCompras.length;
+    const total = filtrados.length;
     const inicio = (page - 1) * pageSize;
-    const data = conCompras.slice(inicio, inicio + pageSize);
+    const data = filtrados.slice(inicio, inicio + pageSize);
 
     return NextResponse.json({
       data,
