@@ -26,7 +26,7 @@ enum EstadoDeuda {
   PAGADA
 }
 
-enum DireccionMensaje {
+enum DireccionMensajeWhatsapp {
   RECIBIDO
   ENVIADO
 }
@@ -237,13 +237,13 @@ model Cliente {
 }
 
 model MensajeWhatsapp {
-  id        String           @id @default(cuid())
+  id        String                   @id @default(cuid())
   telefono  String
-  direccion DireccionMensaje
+  direccion DireccionMensajeWhatsapp
   tipo      String
   contenido String?
-  wamid     String?          @unique
-  creadoEn  DateTime         @default(now())
+  wamid     String?                  @unique
+  creadoEn  DateTime                 @default(now())
 
   @@index([telefono, creadoEn])
 }
