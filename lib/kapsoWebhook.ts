@@ -10,17 +10,20 @@ export function verificarFirmaKapso(rawBody: string, firmaHeader: string | null,
 }
 
 type PayloadMensajeKapso = {
-  from?: string;
-  to?: string;
-  kapso?: { phone_number?: string };
+  message?: { from?: string; to?: string };
+  conversation?: { phone_number?: string };
 };
 
 /**
- * El número del cliente (el otro extremo de la conversación) viene en
- * lugares distintos según la dirección del mensaje. Kapso normaliza esto
- * en "kapso.phone_number"; si no viene, se cae a "from"/"to" del payload
- * crudo de WhatsApp.
+ * Confirmado con un mensaje real: el payload viene envuelto en "message"
+ * (con el "from"/"to" crudo de WhatsApp) y "conversation" (metadata de
+ * Kapso sobre la conversación). "conversation.phone_number" es el más
+ * confiable porque no depende de la dirección del mensaje (aplica igual
+ * para recibidos y enviados); "message.from"/"message.to" quedan como
+ * respaldo por si algún tipo de evento no trae "conversation".
  */
 export function extraerTelefonoContraparte(payload: PayloadMensajeKapso): string | null {
-  return payload.kapso?.phone_number || payload.from || payload.to || null;
+  return (
+    payload.conversation?.phone_number || payload.message?.from || payload.message?.to || null
+  );
 }
