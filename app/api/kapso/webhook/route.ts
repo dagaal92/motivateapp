@@ -34,8 +34,16 @@ export async function POST(req: NextRequest) {
     const telefono = normalizarTelefono(telefonoCrudo);
 
     if (!telefono) {
+      // Diagnóstico temporal: se ve el valor exacto de kapso.phone_number
+      // y el cuerpo completo, para confirmar por qué no se reconoció el
+      // teléfono con datos reales (se puede acortar una vez confirmado).
       await capturarError(
-        new Error(`Webhook de Kapso (${evento}) sin teléfono reconocible: ${rawBody.slice(0, 500)}`)
+        new Error(
+          `Webhook de Kapso (${evento}) sin teléfono reconocible. ` +
+            `kapso.phone_number=${JSON.stringify(payload?.kapso?.phone_number)}, ` +
+            `from=${JSON.stringify(payload?.from)}, to=${JSON.stringify(payload?.to)}. ` +
+            `Cuerpo completo: ${rawBody}`
+        )
       );
       return NextResponse.json({ ok: true, ignorado: "sin teléfono" });
     }
