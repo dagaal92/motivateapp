@@ -10,7 +10,13 @@ export function verificarFirmaKapso(rawBody: string, firmaHeader: string | null,
 }
 
 type PayloadMensajeKapso = {
-  message?: { from?: string; to?: string };
+  message?: {
+    id?: string;
+    from?: string;
+    to?: string;
+    type?: string;
+    text?: { body?: string };
+  };
   conversation?: { phone_number?: string };
 };
 
@@ -26,4 +32,17 @@ export function extraerTelefonoContraparte(payload: PayloadMensajeKapso): string
   return (
     payload.conversation?.phone_number || payload.message?.from || payload.message?.to || null
   );
+}
+
+/**
+ * Solo se guarda el texto cuando el mensaje es de tipo "text": para fotos,
+ * audios, documentos, etc. no se descarga ni se guarda el archivo (por
+ * espacio), solo queda registrado el tipo para mostrar un aviso genérico
+ * en el historial ("Imagen", "Audio"...).
+ */
+export function extraerDatosMensaje(payload: PayloadMensajeKapso) {
+  const tipo = payload.message?.type || "text";
+  const contenido = tipo === "text" ? payload.message?.text?.body || null : null;
+  const wamid = payload.message?.id || null;
+  return { tipo, contenido, wamid };
 }
