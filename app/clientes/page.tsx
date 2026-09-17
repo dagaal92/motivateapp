@@ -13,8 +13,10 @@ import {
   ArrowUpDown,
   Sparkles,
   Search,
+  MessageCircle,
 } from "lucide-react";
 import Pagination from "@/components/Pagination";
+import HistorialWhatsappModal from "@/components/HistorialWhatsappModal";
 
 const PAGE_SIZE = 25;
 
@@ -98,6 +100,7 @@ export default function ClientesPage() {
   const [guardando, setGuardando] = useState(false);
   const [normalizando, setNormalizando] = useState(false);
   const [mensajeNormalizar, setMensajeNormalizar] = useState<string | null>(null);
+  const [clienteHistorial, setClienteHistorial] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -352,7 +355,16 @@ export default function ClientesPage() {
                         {c.email && <p className="text-xs text-muted2">{c.email}</p>}
                       </td>
                       <td className="px-5 py-3 text-ink2">
-                        {fmtContactoRelativo(c.ultimoContactoWhatsapp) || "—"}
+                        <div className="flex items-center gap-2">
+                          <span>{fmtContactoRelativo(c.ultimoContactoWhatsapp) || "—"}</span>
+                          <button
+                            onClick={() => setClienteHistorial(c.id)}
+                            className="w-6 h-6 flex items-center justify-center rounded-md bg-greenSoft text-green hover:bg-green hover:text-white transition-colors shrink-0"
+                            title="Ver historial de WhatsApp"
+                          >
+                            <MessageCircle size={13} />
+                          </button>
+                        </div>
                       </td>
                       <td className="px-5 py-3">
                         <p className="text-ink2">{c.ciudad || "—"}</p>
@@ -513,6 +525,11 @@ export default function ClientesPage() {
           />
         </div>
       )}
+
+      <HistorialWhatsappModal
+        clienteId={clienteHistorial}
+        onClose={() => setClienteHistorial(null)}
+      />
     </main>
   );
 }

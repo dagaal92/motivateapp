@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { normalizarTelefono } from "@/lib/normalizar";
-import { verificarFirmaKapso, extraerTelefonoContraparte } from "@/lib/kapsoWebhook";
+import {
+  verificarFirmaKapso,
+  extraerTelefonoContraparte,
+  extraerDatosMensaje,
+} from "@/lib/kapsoWebhook";
 import { capturarError } from "@/lib/sentry";
 
 // Kapso manda aquí cada mensaje de WhatsApp de la conversación (los que
@@ -38,6 +43,21 @@ export async function POST(req: NextRequest) {
         new Error(`Webhook de Kapso (${evento}) sin teléfono reconocible: ${rawBody.slice(0, 800)}`)
       );
       return NextResponse.json({ ok: true, ignorado: "sin teléfono" });
+    }
+
+    const direccion = evento === "whatsapp.message.received" ? "RECIBIDO" : "ENVIADO";
+    const { tipo, contenido, wamid } = extraerDatosMensaje(payload);
+
+    try {
+      await prisma.mensajeWhatsapp.create({
+        data: { telefono, direccion, tipo, contenido, wamid },
+      });
+    } catch (error) {
+      // Kapso puede reintentar el mismo webhook; con el mismo wamid ya
+      // guardado, se ignora en silencio en vez de duplicar el mensaje.
+      const esDuplicado =
+        error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+      if (!esDuplicado) throw error;
     }
 
     const resultado = await prisma.cliente.updateMany({
