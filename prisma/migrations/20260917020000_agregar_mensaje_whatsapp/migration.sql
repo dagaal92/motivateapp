@@ -1,11 +1,19 @@
 -- CreateEnum
-CREATE TYPE "DireccionMensaje" AS ENUM ('RECIBIDO', 'ENVIADO');
+-- Envuelto en DO/EXCEPTION porque, al no haber una base de datos separada
+-- para vista previa, dos deploys pueden intentar aplicar esta migración
+-- casi al mismo tiempo contra la misma base real; sin esto, el segundo
+-- fallaría con "type already exists" y bloquearía futuras migraciones.
+DO $$ BEGIN
+    CREATE TYPE "DireccionMensajeWhatsapp" AS ENUM ('RECIBIDO', 'ENVIADO');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 -- CreateTable
-CREATE TABLE "MensajeWhatsapp" (
+CREATE TABLE IF NOT EXISTS "MensajeWhatsapp" (
     "id" TEXT NOT NULL,
     "telefono" TEXT NOT NULL,
-    "direccion" "DireccionMensaje" NOT NULL,
+    "direccion" "DireccionMensajeWhatsapp" NOT NULL,
     "tipo" TEXT NOT NULL,
     "contenido" TEXT,
     "wamid" TEXT,
@@ -15,7 +23,7 @@ CREATE TABLE "MensajeWhatsapp" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "MensajeWhatsapp_wamid_key" ON "MensajeWhatsapp"("wamid");
+CREATE UNIQUE INDEX IF NOT EXISTS "MensajeWhatsapp_wamid_key" ON "MensajeWhatsapp"("wamid");
 
 -- CreateIndex
-CREATE INDEX "MensajeWhatsapp_telefono_creadoEn_idx" ON "MensajeWhatsapp"("telefono", "creadoEn");
+CREATE INDEX IF NOT EXISTS "MensajeWhatsapp_telefono_creadoEn_idx" ON "MensajeWhatsapp"("telefono", "creadoEn");
