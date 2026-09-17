@@ -25,6 +25,7 @@ type Cliente = {
   ciudad: string | null;
   departamento: string | null;
   compras: number;
+  ultimoContactoWhatsapp: string | null;
 };
 
 type Pedido = {
@@ -49,6 +50,17 @@ const fmt = (n: number) =>
 
 const fmtFecha = (iso: string) =>
   new Date(iso).toLocaleDateString("es-CO", { day: "2-digit", month: "2-digit", year: "numeric" });
+
+const fmtContactoRelativo = (iso: string | null) => {
+  if (!iso) return null;
+  const minutos = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (minutos < 60) return "hace un momento";
+  const horas = Math.floor(minutos / 60);
+  if (horas < 24) return `hace ${horas} ${horas === 1 ? "hora" : "horas"}`;
+  const dias = Math.floor(horas / 24);
+  if (dias < 30) return `hace ${dias} ${dias === 1 ? "día" : "días"}`;
+  return fmtFecha(iso);
+};
 
 const ESTADO_LABEL: Record<string, string> = {
   PENDIENTE: "Pendiente",
@@ -291,6 +303,7 @@ export default function ClientesPage() {
                     </button>
                   </th>
                   <th className="px-5 py-3">Contacto</th>
+                  <th className="px-5 py-3">Último WhatsApp</th>
                   <th className="px-5 py-3">Ubicación</th>
                   <th className="px-5 py-3">
                     <button
@@ -311,6 +324,9 @@ export default function ClientesPage() {
                       <td className="px-5 py-3">
                         <p className="text-accent">{c.telefono}</p>
                         {c.email && <p className="text-xs text-muted2">{c.email}</p>}
+                      </td>
+                      <td className="px-5 py-3 text-ink2">
+                        {fmtContactoRelativo(c.ultimoContactoWhatsapp) || "—"}
                       </td>
                       <td className="px-5 py-3">
                         <p className="text-ink2">{c.ciudad || "—"}</p>
@@ -350,7 +366,7 @@ export default function ClientesPage() {
 
                     {editando === c.id && (
                       <tr key={`${c.id}-editar`} className="bg-paper border-t border-borderLight">
-                        <td colSpan={5} className="px-5 py-4">
+                        <td colSpan={6} className="px-5 py-4">
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                             <div>
                               <label className={labelCls}>Nombre</label>
@@ -414,7 +430,7 @@ export default function ClientesPage() {
 
                     {expandido === c.id && (
                       <tr key={`${c.id}-pedidos`} className="bg-paper border-t border-borderLight">
-                        <td colSpan={5} className="px-5 py-4">
+                        <td colSpan={6} className="px-5 py-4">
                           {cargandoPedidos === c.id ? (
                             <p className="text-sm text-muted2">Cargando pedidos…</p>
                           ) : (pedidosPorTelefono[c.telefono] || []).length === 0 ? (

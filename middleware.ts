@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { COOKIE_SESION, verificarSesion } from "@/lib/auth";
 
-// Los webhooks de Shopify (creación de pedido, fulfillment) los llama
-// Shopify directamente (no un navegador con sesión) y cada uno se autentica
-// solo, verificando su propia firma HMAC. Por eso quedan fuera de esta
-// contraseña; "/api/shopify/webhook" hace match por prefijo, así que cubre
-// también "/api/shopify/webhook/fulfillment".
+// Los webhooks de Shopify (creación de pedido, fulfillment) y de Kapso
+// (mensajes de WhatsApp) los llaman esos servicios directamente (no un
+// navegador con sesión) y cada uno se autentica solo, verificando su propia
+// firma. Por eso quedan fuera de esta contraseña; "/api/shopify/webhook"
+// hace match por prefijo, así que cubre también
+// "/api/shopify/webhook/fulfillment".
 const RUTAS_PUBLICAS = [
   "/api/shopify/webhook",
+  "/api/kapso/webhook",
   "/login",
   "/api/login",
   "/icon.png",
