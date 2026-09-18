@@ -25,6 +25,12 @@ type DatosPlantillaGuia = {
   numeroOrden: string;
   numeroGuia: string;
   transportadora: string;
+  // La mayoría de los envíos van por Envia, que no está en el listado de
+  // transportadoras de Shopify, así que en Shopify se elige "Otro" y se
+  // pega el link en "URL de seguimiento". Cuando esa URL viene, se usa en
+  // vez del nombre de la transportadora, porque el cliente puede darle clic
+  // y le sirve más que ver "Other".
+  urlSeguimiento?: string | null;
 };
 
 /**
@@ -40,6 +46,8 @@ export async function enviarPlantillaGuia(datos: DatosPlantillaGuia): Promise<vo
   if (!apiKey || !phoneNumberId) {
     throw new Error("Faltan KAPSO_API_KEY o KAPSO_PHONE_NUMBER_ID en el .env");
   }
+
+  const seguimiento = datos.urlSeguimiento || datos.transportadora;
 
   const res = await fetch(
     `https://api.kapso.ai/meta/whatsapp/v24.0/${phoneNumberId}/messages`,
@@ -69,7 +77,7 @@ export async function enviarPlantillaGuia(datos: DatosPlantillaGuia): Promise<vo
                 { type: "text", text: datos.nombreCliente },
                 { type: "text", text: datos.numeroOrden },
                 { type: "text", text: datos.numeroGuia },
-                { type: "text", text: datos.transportadora },
+                { type: "text", text: seguimiento },
               ],
             },
           ],

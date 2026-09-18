@@ -141,6 +141,7 @@ model Pedido {
   general        String?
   numeroGuia     String?
   transportadora String?
+  urlSeguimiento String?
   envio          String?
   ingresoDinero  String?
   departamento   String?

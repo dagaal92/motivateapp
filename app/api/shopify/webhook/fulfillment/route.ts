@@ -13,6 +13,7 @@ type FulfillmentShopify = {
   order_id: number;
   tracking_number: string | null;
   tracking_company: string | null;
+  tracking_url: string | null;
 };
 
 export async function POST(req: NextRequest) {
@@ -54,6 +55,7 @@ export async function POST(req: NextRequest) {
     }
 
     const transportadora = limpiarGuia(fulfillment.tracking_company) || pedido.transportadora;
+    const urlSeguimiento = fulfillment.tracking_url?.trim() || pedido.urlSeguimiento || null;
     const telefono = formatearTelefonoWhatsapp(pedido.telefono);
     const nombreCliente = pedido.cliente?.trim().split(/\s+/)[0] || "cliente";
 
@@ -72,6 +74,7 @@ export async function POST(req: NextRequest) {
       numeroOrden: `#${pedido.numeroOrden}`,
       numeroGuia: guia,
       transportadora,
+      urlSeguimiento,
     });
 
     await prisma.pedido.update({
@@ -79,6 +82,7 @@ export async function POST(req: NextRequest) {
       data: {
         numeroGuia: pedido.numeroGuia || guia,
         transportadora: pedido.transportadora || transportadora,
+        urlSeguimiento: pedido.urlSeguimiento || urlSeguimiento,
         guiaNotificadaEn: new Date(),
       },
     });
