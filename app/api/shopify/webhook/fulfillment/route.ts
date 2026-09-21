@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { verificarFirmaShopify } from "@/lib/shopifyWebhook";
 import { esGuiaValida, limpiarGuia } from "@/lib/guia";
 import { enviarPlantillaGuia, formatearTelefonoWhatsapp } from "@/lib/kapso";
+import { registrarPlantillaSaliente } from "@/lib/mensajesWhatsapp";
 import { capturarError } from "@/lib/sentry";
 
 // Shopify manda este webhook (fulfillments/create y fulfillments/update)
@@ -68,13 +69,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, ignorado: "faltan datos para notificar" });
     }
 
-    await enviarPlantillaGuia({
+    const { wamid, contenido } = await enviarPlantillaGuia({
       telefono,
       nombreCliente,
       numeroOrden: `#${pedido.numeroOrden}`,
       numeroGuia: guia,
       transportadora,
       urlSeguimiento,
+    });
+
+    await registrarPlantillaSaliente({
+      telefono: pedido.telefono,
+      tipo: "compartir_guia",
+      contenido,
+      wamid,
     });
 
     await prisma.pedido.update({

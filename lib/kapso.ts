@@ -19,6 +19,32 @@ export function formatearTelefonoWhatsapp(telefono: string | null | undefined): 
   return `57${digitos}`;
 }
 
+export type ResultadoEnvioPlantilla = {
+  // El id que WhatsApp/Kapso le asigna al mensaje. Se usa para guardarlo en
+  // el historial de conversación (MensajeWhatsapp) sin duplicar lo que
+  // pueda llegar luego por el webhook de Kapso para ese mismo mensaje.
+  wamid: string | null;
+  // Texto ya armado tal como le llegó al cliente, para que el historial de
+  // conversación no se quede solo con la etiqueta "Plantilla".
+  contenido: string;
+};
+
+/**
+ * Saca el id del mensaje de la respuesta de Kapso, sin que un cambio de
+ * formato en esa respuesta pueda tumbar el envío: para este punto el
+ * mensaje ya salió (res.ok ya se validó antes de llamar esto), así que
+ * cualquier problema leyendo el id se traga en silencio y solo se pierde
+ * la referencia para el historial, nunca el envío en sí.
+ */
+async function extraerWamid(res: Response): Promise<string | null> {
+  try {
+    const data = await res.clone().json();
+    return data?.messages?.[0]?.id || null;
+  } catch {
+    return null;
+  }
+}
+
 type DatosPlantillaGuia = {
   telefono: string;
   nombreCliente: string;
@@ -40,7 +66,9 @@ type DatosPlantillaGuia = {
  * eso (normalmente: capturarError + responder 500 para que Shopify
  * reintente el webhook más tarde).
  */
-export async function enviarPlantillaGuia(datos: DatosPlantillaGuia): Promise<void> {
+export async function enviarPlantillaGuia(
+  datos: DatosPlantillaGuia
+): Promise<ResultadoEnvioPlantilla> {
   const apiKey = process.env.KAPSO_API_KEY;
   const phoneNumberId = process.env.KAPSO_PHONE_NUMBER_ID;
   if (!apiKey || !phoneNumberId) {
@@ -90,6 +118,21 @@ export async function enviarPlantillaGuia(datos: DatosPlantillaGuia): Promise<vo
     const detalle = await res.text().catch(() => "");
     throw new Error(`Kapso respondió ${res.status} al enviar la plantilla de guía: ${detalle}`);
   }
+
+  const contenido = [
+    `Hey ${datos.nombreCliente}!💪🏽`,
+    `*Tu pedido #${datos.numeroOrden} ha sido enviado satisfactoriamente* 📦🚚`,
+    "",
+    "_Puedes hacer seguimiento:_",
+    `*Guía:* ${datos.numeroGuia}`,
+    `*Síguelo aquí:* ${seguimiento}.`,
+    "",
+    "Esperamos que te guste el detalle que te enviamos 🎁🤩",
+    "",
+    "*Confírmanos cuando lo recibas* 🥹",
+  ].join("\n");
+
+  return { wamid: await extraerWamid(res), contenido };
 }
 
 const IMAGEN_ENCABEZADO_CONFIRMACION_PAGADO =
@@ -105,7 +148,7 @@ async function enviarMensajePlantilla(opciones: {
   nombrePlantilla: string;
   imagenEncabezado: string;
   parametros: string[];
-}): Promise<void> {
+}): Promise<{ wamid: string | null }> {
   const apiKey = process.env.KAPSO_API_KEY;
   const phoneNumberId = process.env.KAPSO_PHONE_NUMBER_ID;
   if (!apiKey || !phoneNumberId) {
@@ -150,6 +193,8 @@ async function enviarMensajePlantilla(opciones: {
       `Kapso respondió ${res.status} al enviar la plantilla ${opciones.nombrePlantilla}: ${detalle}`
     );
   }
+
+  return { wamid: await extraerWamid(res) };
 }
 
 type DatosConfirmacionPagado = {
@@ -162,13 +207,25 @@ type DatosConfirmacionPagado = {
 /** Pedido ya pagado (no contraentrega): un solo aviso, sin respuesta esperada. */
 export async function enviarPlantillaConfirmacionPagado(
   datos: DatosConfirmacionPagado
-): Promise<void> {
-  await enviarMensajePlantilla({
+): Promise<ResultadoEnvioPlantilla> {
+  const { wamid } = await enviarMensajePlantilla({
     telefono: datos.telefono,
     nombrePlantilla: NOMBRE_PLANTILLA_CONFIRMACION_PAGADO,
     imagenEncabezado: IMAGEN_ENCABEZADO_CONFIRMACION_PAGADO,
     parametros: [datos.nombreCliente, datos.numeroOrden, datos.productos],
   });
+
+  const contenido = [
+    `*¡Pedido confirmado, ${datos.nombreCliente}!*💪`,
+    `Pedido #${datos.numeroOrden}:`,
+    `🛍️ ${datos.productos}`,
+    "",
+    "Ya quedó en nuestras manos y lo estamos preparando para que no le bajes al ritmo.",
+    "",
+    "*Pronto te compartimos la guía de envío* 🤩",
+  ].join("\n");
+
+  return { wamid, contenido };
 }
 
 type DatosConfirmacionContraentrega = {
@@ -186,11 +243,25 @@ type DatosConfirmacionContraentrega = {
  */
 export async function enviarPlantillaConfirmacionContraentrega(
   datos: DatosConfirmacionContraentrega
-): Promise<void> {
-  await enviarMensajePlantilla({
+): Promise<ResultadoEnvioPlantilla> {
+  const { wamid } = await enviarMensajePlantilla({
     telefono: datos.telefono,
     nombrePlantilla: NOMBRE_PLANTILLA_CONFIRMACION_CONTRAENTREGA,
     imagenEncabezado: IMAGEN_ENCABEZADO_CONFIRMACION_CONTRAENTREGA,
     parametros: [datos.nombreCliente, datos.productos, datos.direccion, datos.valorAPagar],
   });
+
+  const contenido = [
+    `¡Hola ${datos.nombreCliente}! 👋✨ Soy Luisa, de Motívate 💪 *¡Mil gracias por tu compra!*`,
+    "",
+    'Ya estamos alistando tu pedido. Antes de despacharlo, *necesitamos saber si todo esta correcto:*',
+    "",
+    `👕 *Producto:* ${datos.productos}`,
+    `📍 *Dirección:* ${datos.direccion}`,
+    `💰 *Valor a pagar contraentrega:* $${datos.valorAPagar}`,
+    "",
+    '¿Toda la info está bien? Respóndeme "Sí, todo bien" y hoy mismo sale tu pedido 🚚',
+  ].join("\n");
+
+  return { wamid, contenido };
 }

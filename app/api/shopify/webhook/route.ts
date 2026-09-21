@@ -11,6 +11,7 @@ import {
   formatearTelefonoWhatsapp,
 } from "@/lib/kapso";
 import { formatearProductosPedido } from "@/lib/productos";
+import { registrarPlantillaSaliente } from "@/lib/mensajesWhatsapp";
 
 export async function POST(req: NextRequest) {
   const secret = process.env.SHOPIFY_API_SECRET;
@@ -73,23 +74,35 @@ export async function POST(req: NextRequest) {
         // pedido recién creado (ya pagado o pendiente de pago
         // contraentrega). Un pedido que ya nace cancelado no se notifica.
         if (pedido.estado === "CONFIRMADO") {
-          await enviarPlantillaConfirmacionPagado({
+          const { wamid, contenido } = await enviarPlantillaConfirmacionPagado({
             telefono,
             nombreCliente,
             numeroOrden: `#${pedido.numeroOrden}`,
             productos: productosTexto,
+          });
+          await registrarPlantillaSaliente({
+            telefono: pedido.telefono,
+            tipo: "confirmacion_pedido_pagado",
+            contenido,
+            wamid,
           });
           await prisma.pedido.update({
             where: { id: pedido.id },
             data: { confirmacionNotificadaEn: new Date() },
           });
         } else if (pedido.estado === "PENDIENTE") {
-          await enviarPlantillaConfirmacionContraentrega({
+          const { wamid, contenido } = await enviarPlantillaConfirmacionContraentrega({
             telefono,
             nombreCliente,
             productos: productosTexto,
             direccion: pedido.direccion || "Sin dirección",
             valorAPagar: new Intl.NumberFormat("es-CO").format(pedido.valorTotal),
+          });
+          await registrarPlantillaSaliente({
+            telefono: pedido.telefono,
+            tipo: "v1_1_confirmar_pedido_contraentrega",
+            contenido,
+            wamid,
           });
           await prisma.pedido.update({
             where: { id: pedido.id },
