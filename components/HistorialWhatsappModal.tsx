@@ -192,9 +192,7 @@ export default function HistorialWhatsappModal({
                   }`}
                 >
                   <p className="text-sm whitespace-pre-wrap break-words">
-                    {m.tipo === "text"
-                      ? m.contenido || "—"
-                      : ETIQUETA_TIPO[m.tipo] || `📎 ${m.tipo}`}
+                    {m.contenido || ETIQUETA_TIPO[m.tipo] || `📎 ${m.tipo}`}
                   </p>
                   <p
                     className={`text-[10px] mt-1 ${
