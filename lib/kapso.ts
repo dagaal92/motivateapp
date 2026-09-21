@@ -45,6 +45,14 @@ async function extraerWamid(res: Response): Promise<string | null> {
   }
 }
 
+// Algunos emojis (los que usan un "high surrogate" D83C/D83E, como 🎁🤩🥹)
+// llegaban corruptos al historial en producción: la build de Vercel los
+// minifica mal como literales de texto. Escritos por su código numérico no
+// dependen de que el minificador los copie bien.
+const EMOJI_REGALO = String.fromCodePoint(0x1f381); // 🎁
+const EMOJI_SORPRENDIDO = String.fromCodePoint(0x1f929); // 🤩
+const EMOJI_OJOS_AGUADOS = String.fromCodePoint(0x1f979); // 🥹
+
 type DatosPlantillaGuia = {
   telefono: string;
   nombreCliente: string;
@@ -127,9 +135,9 @@ export async function enviarPlantillaGuia(
     `*Guía:* ${datos.numeroGuia}`,
     `*Síguelo aquí:* ${seguimiento}.`,
     "",
-    "Esperamos que te guste el detalle que te enviamos 🎁🤩",
+    `Esperamos que te guste el detalle que te enviamos ${EMOJI_REGALO}${EMOJI_SORPRENDIDO}`,
     "",
-    "*Confírmanos cuando lo recibas* 🥹",
+    `*Confírmanos cuando lo recibas* ${EMOJI_OJOS_AGUADOS}`,
   ].join("\n");
 
   return { wamid: await extraerWamid(res), contenido };
@@ -222,7 +230,7 @@ export async function enviarPlantillaConfirmacionPagado(
     "",
     "Ya quedó en nuestras manos y lo estamos preparando para que no le bajes al ritmo.",
     "",
-    "*Pronto te compartimos la guía de envío* 🤩",
+    `*Pronto te compartimos la guía de envío* ${EMOJI_SORPRENDIDO}`,
   ].join("\n");
 
   return { wamid, contenido };

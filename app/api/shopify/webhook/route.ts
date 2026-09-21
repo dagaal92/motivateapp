@@ -77,7 +77,9 @@ export async function POST(req: NextRequest) {
           const { wamid, contenido } = await enviarPlantillaConfirmacionPagado({
             telefono,
             nombreCliente,
-            numeroOrden: `#${pedido.numeroOrden}`,
+            // La plantilla ya trae el "#" fijo antes de {{2}}; si se lo
+            // mandamos aquí también queda "##".
+            numeroOrden: pedido.numeroOrden,
             productos: productosTexto,
           });
           await registrarPlantillaSaliente({
