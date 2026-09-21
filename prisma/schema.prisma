@@ -150,9 +150,10 @@ model Pedido {
   cuentaFleteId String?
   cuentaFlete   Cuenta? @relation("PedidoCuentaFlete", fields: [cuentaFleteId], references: [id])
 
-  completadoEn     DateTime?
-  impreso          Boolean   @default(false)
-  guiaNotificadaEn DateTime?
+  completadoEn             DateTime?
+  impreso                  Boolean   @default(false)
+  guiaNotificadaEn         DateTime?
+  confirmacionNotificadaEn DateTime?
 
   notas         String?
   creadoEn      DateTime @default(now())

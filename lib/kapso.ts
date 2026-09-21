@@ -91,3 +91,105 @@ export async function enviarPlantillaGuia(datos: DatosPlantillaGuia): Promise<vo
     throw new Error(`Kapso respondió ${res.status} al enviar la plantilla de guía: ${detalle}`);
   }
 }
+
+// Mismo header que "compartir_guia" por ahora, prestado hasta que haya un
+// diseño propio para el mensaje de confirmación de pedido.
+const IMAGEN_ENCABEZADO_CONFIRMACION = IMAGEN_ENCABEZADO_GUIA;
+
+const NOMBRE_PLANTILLA_CONFIRMACION_PAGADO = "confirmacion_pedido_pagado";
+const NOMBRE_PLANTILLA_CONFIRMACION_CONTRAENTREGA = "v1_1_confirmar_pedido_contraentrega";
+
+async function enviarMensajePlantilla(opciones: {
+  telefono: string;
+  nombrePlantilla: string;
+  imagenEncabezado: string;
+  parametros: string[];
+}): Promise<void> {
+  const apiKey = process.env.KAPSO_API_KEY;
+  const phoneNumberId = process.env.KAPSO_PHONE_NUMBER_ID;
+  if (!apiKey || !phoneNumberId) {
+    throw new Error("Faltan KAPSO_API_KEY o KAPSO_PHONE_NUMBER_ID en el .env");
+  }
+
+  const res = await fetch(
+    `https://api.kapso.ai/meta/whatsapp/v24.0/${phoneNumberId}/messages`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": apiKey,
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: opciones.telefono,
+        type: "template",
+        template: {
+          name: opciones.nombrePlantilla,
+          language: { code: IDIOMA_PLANTILLA_GUIA },
+          components: [
+            {
+              type: "header",
+              parameters: [
+                { type: "image", image: { link: opciones.imagenEncabezado } },
+              ],
+            },
+            {
+              type: "body",
+              parameters: opciones.parametros.map((texto) => ({ type: "text", text: texto })),
+            },
+          ],
+        },
+      }),
+    }
+  );
+
+  if (!res.ok) {
+    const detalle = await res.text().catch(() => "");
+    throw new Error(
+      `Kapso respondió ${res.status} al enviar la plantilla ${opciones.nombrePlantilla}: ${detalle}`
+    );
+  }
+}
+
+type DatosConfirmacionPagado = {
+  telefono: string;
+  nombreCliente: string;
+  numeroOrden: string;
+  productos: string;
+};
+
+/** Pedido ya pagado (no contraentrega): un solo aviso, sin respuesta esperada. */
+export async function enviarPlantillaConfirmacionPagado(
+  datos: DatosConfirmacionPagado
+): Promise<void> {
+  await enviarMensajePlantilla({
+    telefono: datos.telefono,
+    nombrePlantilla: NOMBRE_PLANTILLA_CONFIRMACION_PAGADO,
+    imagenEncabezado: IMAGEN_ENCABEZADO_CONFIRMACION,
+    parametros: [datos.nombreCliente, datos.numeroOrden, datos.productos],
+  });
+}
+
+type DatosConfirmacionContraentrega = {
+  telefono: string;
+  nombreCliente: string;
+  productos: string;
+  direccion: string;
+  valorAPagar: string;
+};
+
+/**
+ * Primer mensaje del flujo de contraentrega (con botones de respuesta
+ * rápida). Solo manda el mensaje inicial; la respuesta del cliente y los
+ * recordatorios (v2-v5) son un flujo aparte, todavía no implementado.
+ */
+export async function enviarPlantillaConfirmacionContraentrega(
+  datos: DatosConfirmacionContraentrega
+): Promise<void> {
+  await enviarMensajePlantilla({
+    telefono: datos.telefono,
+    nombrePlantilla: NOMBRE_PLANTILLA_CONFIRMACION_CONTRAENTREGA,
+    imagenEncabezado: IMAGEN_ENCABEZADO_CONFIRMACION,
+    parametros: [datos.nombreCliente, datos.productos, datos.direccion, datos.valorAPagar],
+  });
+}

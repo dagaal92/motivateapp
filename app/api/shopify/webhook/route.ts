@@ -5,6 +5,12 @@ import { ajustarStockPedido, resolverProductosShopify } from "@/lib/inventario";
 import { upsertClienteDesdePedido } from "@/lib/clientes";
 import { capturarError } from "@/lib/sentry";
 import { verificarFirmaShopify } from "@/lib/shopifyWebhook";
+import {
+  enviarPlantillaConfirmacionContraentrega,
+  enviarPlantillaConfirmacionPagado,
+  formatearTelefonoWhatsapp,
+} from "@/lib/kapso";
+import { formatearProductosPedido } from "@/lib/productos";
 
 export async function POST(req: NextRequest) {
   const secret = process.env.SHOPIFY_API_SECRET;
@@ -53,6 +59,47 @@ export async function POST(req: NextRequest) {
       await upsertClienteDesdePedido(tx, nuevoPedido);
       return nuevoPedido;
     });
+
+    // El mensaje de confirmación es un efecto secundario: si Kapso falla,
+    // no queremos revertir ni reintentar la creación del pedido (Shopify
+    // reintentaría el webhook completo y duplicaría el trabajo ya hecho).
+    try {
+      const telefono = formatearTelefonoWhatsapp(pedido.telefono);
+      if (telefono && pedido.numeroOrden) {
+        const nombreCliente = pedido.cliente?.trim().split(/\s+/)[0] || "cliente";
+        const productosTexto = formatearProductosPedido(pedido.productos);
+
+        // Solo tiene sentido avisar en los dos estados posibles de un
+        // pedido recién creado (ya pagado o pendiente de pago
+        // contraentrega). Un pedido que ya nace cancelado no se notifica.
+        if (pedido.estado === "CONFIRMADO") {
+          await enviarPlantillaConfirmacionPagado({
+            telefono,
+            nombreCliente,
+            numeroOrden: `#${pedido.numeroOrden}`,
+            productos: productosTexto,
+          });
+          await prisma.pedido.update({
+            where: { id: pedido.id },
+            data: { confirmacionNotificadaEn: new Date() },
+          });
+        } else if (pedido.estado === "PENDIENTE") {
+          await enviarPlantillaConfirmacionContraentrega({
+            telefono,
+            nombreCliente,
+            productos: productosTexto,
+            direccion: pedido.direccion || "Sin dirección",
+            valorAPagar: new Intl.NumberFormat("es-CO").format(pedido.valorTotal),
+          });
+          await prisma.pedido.update({
+            where: { id: pedido.id },
+            data: { confirmacionNotificadaEn: new Date() },
+          });
+        }
+      }
+    } catch (error) {
+      await capturarError(error);
+    }
 
     return NextResponse.json({ ok: true, id: pedido.id }, { status: 201 });
   } catch (error) {
