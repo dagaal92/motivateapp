@@ -92,9 +92,10 @@ export async function enviarPlantillaGuia(datos: DatosPlantillaGuia): Promise<vo
   }
 }
 
-// Mismo header que "compartir_guia" por ahora, prestado hasta que haya un
-// diseño propio para el mensaje de confirmación de pedido.
-const IMAGEN_ENCABEZADO_CONFIRMACION = IMAGEN_ENCABEZADO_GUIA;
+const IMAGEN_ENCABEZADO_CONFIRMACION_PAGADO =
+  "https://cdn.shopify.com/s/files/1/0570/9751/9284/files/Confirmar_Pedido-_-Pago_Online.jpg?v=1789994889";
+const IMAGEN_ENCABEZADO_CONFIRMACION_CONTRAENTREGA =
+  "https://cdn.shopify.com/s/files/1/0570/9751/9284/files/Confirmar_Pedido-_-Pago_Contra_Entrega.jpg?v=1789993423";
 
 const NOMBRE_PLANTILLA_CONFIRMACION_PAGADO = "confirmacion_pedido_pagado";
 const NOMBRE_PLANTILLA_CONFIRMACION_CONTRAENTREGA = "v1_1_confirmar_pedido_contraentrega";
@@ -165,7 +166,7 @@ export async function enviarPlantillaConfirmacionPagado(
   await enviarMensajePlantilla({
     telefono: datos.telefono,
     nombrePlantilla: NOMBRE_PLANTILLA_CONFIRMACION_PAGADO,
-    imagenEncabezado: IMAGEN_ENCABEZADO_CONFIRMACION,
+    imagenEncabezado: IMAGEN_ENCABEZADO_CONFIRMACION_PAGADO,
     parametros: [datos.nombreCliente, datos.numeroOrden, datos.productos],
   });
 }
@@ -189,7 +190,7 @@ export async function enviarPlantillaConfirmacionContraentrega(
   await enviarMensajePlantilla({
     telefono: datos.telefono,
     nombrePlantilla: NOMBRE_PLANTILLA_CONFIRMACION_CONTRAENTREGA,
-    imagenEncabezado: IMAGEN_ENCABEZADO_CONFIRMACION,
+    imagenEncabezado: IMAGEN_ENCABEZADO_CONFIRMACION_CONTRAENTREGA,
     parametros: [datos.nombreCliente, datos.productos, datos.direccion, datos.valorAPagar],
   });
 }
