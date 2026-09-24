@@ -126,6 +126,11 @@ function subt_exportarAudio(presetManual) {
     }
 }
 
+function subt_elegirSrt() {
+    var f = subt_carpeta().openDlg("Elige los subtítulos (.srt) a los que quieres cambiar el estilo", "*.srt");
+    return f ? "OK|" + f.fsName : "ERROR|cancelado";
+}
+
 function subt_elegirPreset() {
     var f = File.openDialog("Elige un ajuste de exportación de audio (.epr)", "*.epr");
     return f ? "OK|" + f.fsName : "ERROR|cancelado";

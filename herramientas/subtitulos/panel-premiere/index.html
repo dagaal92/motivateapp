@@ -10,7 +10,7 @@
   button { width: 100%; padding: 8px; margin-top: 8px; border: 0; border-radius: 4px; cursor: pointer; }
   #generar { background: #2d8ceb; color: #fff; font-weight: 600; font-size: 13px; }
   #generar:disabled { background: #555; cursor: default; }
-  #preset { background: #3a3a3a; color: #bbb; font-size: 11px; }
+  #preset, #restilo { background: #3a3a3a; color: #bbb; font-size: 11px; }
   #log { margin-top: 10px; background: #1b1b1b; border: 1px solid #333; height: 180px; overflow-y: auto;
          padding: 6px; white-space: pre-wrap; font: 11px monospace; color: #aaa; }
   .ok { color: #6c6; } .error { color: #f66; }
@@ -31,6 +31,12 @@
       <option value="large-v3">Máxima (muy lenta)</option>
     </select>
   </label>
+  <label>Fuente
+    <select id="fuente">
+      <option value="Poppins-Light.ttf">Poppins Light</option>
+      <option value="arialbd.ttf">Arial Negrita</option>
+    </select>
+  </label>
   <label>Posición del texto
     <select id="posicion">
       <option value="30">Arriba</option>
@@ -42,6 +48,7 @@
   <label>Quitar puntuación <input type="checkbox" id="sinPuntuacion"></label>
 
   <button id="generar">Subtitular secuencia activa</button>
+  <button id="restilo">Cambiar fuente/posición a subtítulos ya hechos (sin transcribir)</button>
   <button id="preset">Elegir preset de audio (solo si falla la exportación)</button>
   <div id="log"></div>
 

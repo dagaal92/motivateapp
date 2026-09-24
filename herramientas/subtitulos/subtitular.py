@@ -16,8 +16,10 @@ y arrástralo a la línea de tiempo (queda como pista de subtítulos).
 
 import argparse
 import json
+import os
 import re
 import sys
+import time
 from pathlib import Path
 
 # Si el siguiente subtítulo empieza antes de este hueco (segundos), estiramos
@@ -114,21 +116,30 @@ def escribir_srt(grupos, destino):
             f.write(f"{n}\n{formato_tiempo(inicio)} --> {formato_tiempo(fin)}\n{texto}\n\n")
 
 
-FUENTES = ["arialbd.ttf", "Arial Bold.ttf", "DejaVuSans-Bold.ttf"]
+FUENTE_POR_DEFECTO = "arialbd.ttf"
 
 
-def cargar_fuente(tamano):
+def carpetas_de_fuentes():
+    yield Path(__file__).resolve().parent / "fuentes"  # fuentes incluidas (Poppins)
+    for variable, sub in (("WINDIR", "Fonts"), ("LOCALAPPDATA", "Microsoft/Windows/Fonts")):
+        if os.environ.get(variable):
+            yield Path(os.environ[variable]) / sub
+
+
+def cargar_fuente(nombre, tamano):
     from PIL import ImageFont
 
-    for nombre in FUENTES:
+    candidatos = [nombre] + [str(c / nombre) for c in carpetas_de_fuentes()]
+    candidatos += [FUENTE_POR_DEFECTO, "DejaVuSans-Bold.ttf"]
+    for candidato in candidatos:
         try:
-            return ImageFont.truetype(nombre, tamano)
+            return ImageFont.truetype(candidato, tamano)
         except OSError:
             continue
     return ImageFont.load_default(tamano)
 
 
-def dibujar_texto(texto, ancho, alto, posicion):
+def dibujar_texto(texto, ancho, alto, posicion, nombre_fuente):
     """Imagen transparente con el texto en blanco y borde negro."""
     from PIL import Image, ImageDraw
 
@@ -137,8 +148,10 @@ def dibujar_texto(texto, ancho, alto, posicion):
         return imagen
     tamano = int(min(ancho, alto) * 0.11)
     while True:
-        fuente = cargar_fuente(tamano)
-        borde = max(2, tamano // 12)
+        fuente = cargar_fuente(nombre_fuente, tamano)
+        # Las fuentes finas (Light, Thin) se ven mejor con un borde más delgado.
+        fina = re.search(r"light|thin", nombre_fuente, re.I)
+        borde = max(2, tamano // (22 if fina else 12))
         dibujo = ImageDraw.Draw(imagen)
         x0, y0, x1, y1 = dibujo.textbbox((0, 0), texto, font=fuente, stroke_width=borde)
         if x1 - x0 <= ancho * 0.9 or tamano <= 12:
@@ -150,7 +163,7 @@ def dibujar_texto(texto, ancho, alto, posicion):
     return imagen
 
 
-def renderizar_video(grupos, destino, ancho, alto, fps, posicion):
+def renderizar_video(grupos, destino, ancho, alto, fps, posicion, nombre_fuente):
     """Crea un .mov con fondo transparente (códec Animation) con las palabras,
     para ponerlo encima del video en Premiere."""
     import av
@@ -175,7 +188,7 @@ def renderizar_video(grupos, destino, ancho, alto, fps, posicion):
             actual += 1
         texto = grupos[actual][2] if actual < len(grupos) and grupos[actual][0] <= t else ""
         if texto not in cuadros:
-            imagen = dibujar_texto(texto, ancho, alto, posicion)
+            imagen = dibujar_texto(texto, ancho, alto, posicion, nombre_fuente)
             # from_image descarta la transparencia; por eso pasamos los píxeles RGBA.
             rgba = numpy.asarray(imagen)
             cuadros[texto] = av.VideoFrame.from_ndarray(rgba, format="rgba").reformat(format="argb")
@@ -190,6 +203,28 @@ def renderizar_video(grupos, destino, ancho, alto, fps, posicion):
         contenedor.mux(paquete)
     contenedor.close()
     print(f"Listo: {destino}")
+    print(f"VIDEO: {destino}")  # el panel de Premiere lee esta línea
+
+
+def leer_srt(ruta):
+    """Lee un .srt ya hecho para volver a crear el video sin transcribir."""
+    def segundos(t):
+        h, m, resto = t.strip().replace(",", ".").split(":")
+        return int(h) * 3600 + int(m) * 60 + float(resto)
+
+    grupos = []
+    with open(ruta, encoding="utf-8-sig") as f:
+        bloques = re.split(r"\n\s*\n", f.read().strip())
+    for bloque in bloques:
+        lineas = bloque.splitlines()
+        tiempos = next((i for i, l in enumerate(lineas) if "-->" in l), None)
+        if tiempos is None:
+            continue
+        inicio, fin = lineas[tiempos].split("-->")
+        texto = " ".join(lineas[tiempos + 1 :]).strip()
+        if texto:
+            grupos.append([segundos(inicio), segundos(fin), texto])
+    return grupos
 
 
 def main():
@@ -214,7 +249,21 @@ def main():
         help="Crear también un .mov transparente con las palabras (para Premiere 2020 y anteriores)",
     )
     parser.add_argument("--posicion", type=float, default=70, help="Altura del texto en %% (0 arriba, 100 abajo)")
+    parser.add_argument("--fuente", default=FUENTE_POR_DEFECTO, help="Archivo de fuente, ej. Poppins-Light.ttf")
+    parser.add_argument("--desde-srt", help="Volver a crear el video de un .srt ya hecho (sin transcribir)")
     args = parser.parse_args()
+
+    if args.desde_srt:
+        if not args.video:
+            parser.error("--desde-srt necesita --video ANCHO ALTO FPS")
+        grupos = leer_srt(args.desde_srt)
+        for g in grupos:
+            g[2] = limpiar(g[2], args.mayusculas, args.sin_puntuacion)
+        ancho, alto, fps = args.video
+        # Nombre nuevo: el video anterior puede estar en uso en Premiere.
+        destino = Path(args.desde_srt).with_name(f"{Path(args.desde_srt).stem}_{int(time.time())}.mov")
+        renderizar_video(grupos, destino, int(ancho), int(alto), fps, args.posicion, args.fuente)
+        return
 
     print(f"Cargando modelo '{args.modelo}' (la primera vez se descarga, tarda un poco)...")
     modelo = cargar_modelo(args.modelo)
@@ -225,7 +274,7 @@ def main():
         print(f"Listo: {destino} ({len(grupos)} subtítulos)")
         if args.video:
             ancho, alto, fps = args.video
-            renderizar_video(grupos, Path(destino).with_suffix(".mov"), int(ancho), int(alto), fps, args.posicion)
+            renderizar_video(grupos, Path(destino).with_suffix(".mov"), int(ancho), int(alto), fps, args.posicion, args.fuente)
 
     if args.clips:
         guardar(palabras_de_clips(modelo, args.clips, args.idioma), args.salida)

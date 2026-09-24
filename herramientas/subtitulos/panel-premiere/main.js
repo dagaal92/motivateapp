@@ -4,7 +4,7 @@ var childProcess = nodeRequire("child_process");
 var fs = nodeRequire("fs");
 var path = nodeRequire("path");
 
-var OPCIONES = ["palabras", "idioma", "modelo", "posicion", "mayusculas", "sinPuntuacion"];
+var OPCIONES = ["palabras", "idioma", "modelo", "fuente", "posicion", "mayusculas", "sinPuntuacion"];
 var $ = function (id) { return document.getElementById(id); };
 
 function log(texto, clase) {
@@ -104,16 +104,21 @@ function ejecutarPython(argumentos, alSalirTexto) {
 var videoSecuencia = null;
 
 function opcionesPython() {
-  var argumentos = [
+  return [
     "--idioma", $("idioma").value,
     "--modelo", $("modelo").value,
     "--palabras", $("palabras").value,
-  ];
+  ].concat(opcionesEstilo());
+}
+
+// Opciones de cómo se ve el texto (sirven también sin transcribir).
+function opcionesEstilo() {
+  var argumentos = [];
   if ($("mayusculas").checked) argumentos.push("--mayusculas");
   if ($("sinPuntuacion").checked) argumentos.push("--sin-puntuacion");
   if (videoSecuencia) {
     argumentos.push("--video", videoSecuencia.ancho, videoSecuencia.alto, videoSecuencia.fps);
-    argumentos.push("--posicion", $("posicion").value);
+    argumentos.push("--posicion", $("posicion").value, "--fuente", $("fuente").value);
   }
   return argumentos;
 }
@@ -169,8 +174,8 @@ function generar() {
 
   evalScript("subt_info()")
     .then(function (info) {
-      var datos = info.split("|");
-      videoSecuencia = datos[3] === "1" ? null : { ancho: datos[0], alto: datos[1], fps: datos[2] };
+      var datos = leerVideoSecuencia(info);
+      videoSecuencia = datos.subtitulos ? null : datos;
       return conAudioExportado(preset, temporales);
     })
     .catch(function (e) {
@@ -206,6 +211,48 @@ function generar() {
     });
 }
 
+function leerVideoSecuencia(info) {
+  var datos = info.split("|");
+  return { ancho: datos[0], alto: datos[1], fps: datos[2], subtitulos: datos[3] === "1" };
+}
+
+// Vuelve a crear el video de las palabras desde un .srt ya hecho, con la
+// fuente y posición elegidas. No transcribe de nuevo, así que es rápido.
+function cambiarEstilo() {
+  guardarOpciones();
+  $("restilo").disabled = true;
+  $("log").innerHTML = "";
+  var video = null;
+  evalScript("subt_info()")
+    .then(function (info) {
+      videoSecuencia = leerVideoSecuencia(info);
+      return evalScript("subt_elegirSrt()");
+    })
+    .then(function (srt) {
+      log("Creando el video con la nueva fuente...");
+      var argumentos = [path.join(carpetaExtension(), "subtitular.py"), "--desde-srt", srt]
+        .concat(opcionesEstilo());
+      return ejecutarPython(argumentos, function (linea, esError) {
+        if (/^VIDEO: /.test(linea)) video = linea.slice(7);
+        else if (!esError || /error|traceback/i.test(linea)) log(linea, esError ? "error" : null);
+      });
+    })
+    .then(function () {
+      if (!video || !fs.existsSync(video)) throw new Error("No se generó el video.");
+      log("Poniéndolo en la secuencia...");
+      return evalScript("subt_importar(" + comillas(video) + ")");
+    })
+    .then(function () {
+      log("¡Listo! Quedó en una pista nueva. Apaga o borra la versión anterior.", "ok");
+    })
+    .catch(function (e) {
+      if (e.message !== "cancelado") log("Error: " + e.message, "error");
+    })
+    .then(function () {
+      $("restilo").disabled = false;
+    });
+}
+
 function elegirPreset() {
   evalScript("subt_elegirPreset()")
     .then(function (ruta) {
@@ -218,3 +265,4 @@ function elegirPreset() {
 leerOpciones();
 $("generar").addEventListener("click", generar);
 $("preset").addEventListener("click", elegirPreset);
+$("restilo").addEventListener("click", cambiarEstilo);
