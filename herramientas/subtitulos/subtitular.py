@@ -15,6 +15,7 @@ y arrástralo a la línea de tiempo (queda como pista de subtítulos).
 """
 
 import argparse
+import json
 import re
 import sys
 from pathlib import Path
@@ -67,6 +68,27 @@ def transcribir(modelo, ruta, idioma):
     return palabras
 
 
+def palabras_de_clips(modelo, ruta_json, idioma):
+    """Transcribe los archivos originales de cada clip y pasa los tiempos
+    a la línea de tiempo de la secuencia."""
+    with open(ruta_json, encoding="utf-8") as f:
+        clips = json.load(f)
+    transcritos = {}
+    palabras = []
+    for clip in clips:
+        archivo = clip["archivo"]
+        if archivo not in transcritos:
+            print(f"\nTranscribiendo {Path(archivo).name}...")
+            transcritos[archivo] = transcribir(modelo, archivo, idioma)
+        salida = clip["entrada"] + (clip["fin"] - clip["inicio"])
+        desfase = clip["inicio"] - clip["entrada"]
+        for inicio, fin, texto in transcritos[archivo]:
+            if clip["entrada"] <= inicio < salida:
+                palabras.append((inicio + desfase, min(fin, salida) + desfase, texto))
+    palabras.sort(key=lambda p: p[0])
+    return palabras
+
+
 def agrupar(palabras, por_grupo, mayusculas, sin_puntuacion):
     grupos = []
     for i in range(0, len(palabras), por_grupo):
@@ -94,7 +116,9 @@ def escribir_srt(grupos, destino):
 
 def main():
     parser = argparse.ArgumentParser(description="Subtítulos palabra por palabra para Premiere.")
-    parser.add_argument("archivos", nargs="+", help="Videos o audios a subtitular")
+    parser.add_argument("archivos", nargs="*", help="Videos o audios a subtitular")
+    parser.add_argument("--clips", help="JSON con los clips de una secuencia (lo usa el panel de Premiere)")
+    parser.add_argument("--salida", help="Ruta del .srt a crear (con --clips)")
     parser.add_argument("--idioma", default="es", help="Idioma del audio (por defecto: es)")
     parser.add_argument(
         "--modelo",
@@ -109,17 +133,22 @@ def main():
     print(f"Cargando modelo '{args.modelo}' (la primera vez se descarga, tarda un poco)...")
     modelo = cargar_modelo(args.modelo)
 
+    def guardar(palabras, destino):
+        grupos = agrupar(palabras, max(1, args.palabras), args.mayusculas, args.sin_puntuacion)
+        escribir_srt(grupos, destino)
+        print(f"Listo: {destino} ({len(grupos)} subtítulos)")
+
+    if args.clips:
+        guardar(palabras_de_clips(modelo, args.clips, args.idioma), args.salida)
+        return
+
     for archivo in args.archivos:
         ruta = Path(archivo)
         if not ruta.exists():
             print(f"No encuentro el archivo: {ruta}")
             continue
         print(f"\nTranscribiendo {ruta.name}...")
-        palabras = transcribir(modelo, ruta, args.idioma)
-        grupos = agrupar(palabras, max(1, args.palabras), args.mayusculas, args.sin_puntuacion)
-        destino = ruta.with_suffix(".srt")
-        escribir_srt(grupos, destino)
-        print(f"Listo: {destino} ({len(grupos)} subtítulos)")
+        guardar(transcribir(modelo, ruta, args.idioma), ruta.with_suffix(".srt"))
 
 
 if __name__ == "__main__":

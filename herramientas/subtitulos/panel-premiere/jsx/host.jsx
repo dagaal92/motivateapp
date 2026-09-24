@@ -39,6 +39,50 @@ function subt_buscarPreset() {
     return mejor;
 }
 
+// Carpeta "Subtitulos" junto al proyecto (o en temporales si no está guardado).
+function subt_carpeta() {
+    var carpeta;
+    if (app.project.path) {
+        carpeta = new Folder(new File(app.project.path).parent.fsName + "/Subtitulos");
+    } else {
+        carpeta = new Folder(Folder.temp.fsName + "/Subtitulos");
+    }
+    if (!carpeta.exists) carpeta.create();
+    return carpeta;
+}
+
+function subt_nombreBase(seq) {
+    return seq.name.replace(/[^\w\-]+/g, "_") + "_" + new Date().getTime();
+}
+
+// Plan B sin exportar: lista los clips de las pistas de audio no silenciadas
+// con su archivo original y dónde caen en la secuencia.
+// Primera línea: ruta del .srt a crear. Luego: archivo, inicio, fin, entrada (segundos).
+function subt_clipsAudio() {
+    try {
+        var seq = app.project.activeSequence;
+        if (!seq) return "ERROR|Abre (activa) la secuencia que quieres subtitular.";
+
+        var lineas = [];
+        for (var t = 0; t < seq.audioTracks.numTracks; t++) {
+            var pista = seq.audioTracks[t];
+            if (pista.isMuted && pista.isMuted()) continue;
+            for (var c = 0; c < pista.clips.numItems; c++) {
+                var clip = pista.clips[c];
+                var ruta = clip.projectItem && clip.projectItem.getMediaPath ? clip.projectItem.getMediaPath() : "";
+                if (!ruta) continue;
+                lineas.push([ruta, clip.start.seconds, clip.end.seconds, clip.inPoint.seconds].join("\t"));
+            }
+        }
+        if (!lineas.length) return "ERROR|No encontré clips de audio en la secuencia.";
+
+        var srt = new File(subt_carpeta().fsName + "/" + subt_nombreBase(seq) + ".srt").fsName;
+        return "OK|" + srt + "\n" + lineas.join("\n");
+    } catch (e) {
+        return "ERROR|" + e.toString();
+    }
+}
+
 function subt_exportarAudio(presetManual) {
     try {
         var seq = app.project.activeSequence;
@@ -49,17 +93,11 @@ function subt_exportarAudio(presetManual) {
             return "ERROR|No encontré un ajuste de exportación de audio. Elige uno (.epr) con el botón 'Elegir preset'.";
         }
 
-        var carpeta;
-        if (app.project.path) {
-            carpeta = new Folder(new File(app.project.path).parent.fsName + "/Subtitulos");
-        } else {
-            carpeta = new Folder(Folder.temp.fsName + "/Subtitulos");
-        }
-        if (!carpeta.exists) carpeta.create();
-
-        var base = seq.name.replace(/[^\w\-]+/g, "_") + "_" + new Date().getTime();
+        var carpeta = subt_carpeta();
+        var base = subt_nombreBase(seq);
         var extension = /wav|waveform|57415645/i.test(preset.fsName) ? ".wav" : ".mp3";
-        var salida = carpeta.fsName + "/" + base + extension;
+        // fsName deja la ruta con las barras de Windows; Premiere falla con rutas mezcladas.
+        var salida = new File(carpeta.fsName + "/" + base + extension).fsName;
 
         var resultado = seq.exportAsMediaDirect(salida, preset.fsName, app.encoder.ENCODE_ENTIRE);
 

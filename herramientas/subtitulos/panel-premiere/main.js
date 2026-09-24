@@ -99,38 +99,80 @@ function ejecutarPython(argumentos, alSalirTexto) {
   });
 }
 
+function opcionesPython() {
+  var argumentos = [
+    "--idioma", $("idioma").value,
+    "--modelo", $("modelo").value,
+    "--palabras", $("palabras").value,
+  ];
+  if ($("mayusculas").checked) argumentos.push("--mayusculas");
+  if ($("sinPuntuacion").checked) argumentos.push("--sin-puntuacion");
+  return argumentos;
+}
+
+function transcribir(argumentos) {
+  log("2/3 Transcribiendo (la primera vez descarga el modelo, puede tardar)...");
+  var script = path.join(carpetaExtension(), "subtitular.py");
+  return ejecutarPython([script].concat(argumentos, opcionesPython()), function (linea, esError) {
+    // Los avisos de las librerías salen por stderr; solo mostramos lo útil.
+    if (!esError || /error|traceback/i.test(linea)) log(linea, esError ? "error" : null);
+  });
+}
+
+// Plan A: exportar el audio de la secuencia y transcribirlo. Devuelve la ruta del .srt.
+function conAudioExportado(preset, temporales) {
+  log("1/3 Exportando el audio de la secuencia...");
+  var exportacion = evalScript("subt_exportarAudio(" + comillas(preset) + ")").catch(function (e) {
+    e.exportacion = true;
+    throw e;
+  });
+  return exportacion.then(function (audio) {
+    temporales.push(audio);
+    return transcribir([audio]).then(function () {
+      return audio.replace(/\.[^.\\/]+$/, "") + ".srt";
+    });
+  });
+}
+
+// Plan B: sin exportar, transcribir los archivos originales de los clips de audio.
+function conArchivosOriginales(temporales) {
+  log("1/3 Leyendo los clips de audio de la secuencia...");
+  return evalScript("subt_clipsAudio()").then(function (respuesta) {
+    var lineas = respuesta.split("\n");
+    var srt = lineas.shift();
+    var clips = lineas.map(function (l) {
+      var c = l.split("\t");
+      return { archivo: c[0], inicio: +c[1], fin: +c[2], entrada: +c[3] };
+    });
+    var json = srt.replace(/\.srt$/i, "_clips.json");
+    fs.writeFileSync(json, JSON.stringify(clips), "utf8");
+    temporales.push(json);
+    return transcribir(["--clips", json, "--salida", srt]).then(function () { return srt; });
+  });
+}
+
 function generar() {
   guardarOpciones();
   $("generar").disabled = true;
   $("log").innerHTML = "";
-  var rutaAudio = null;
+  var temporales = [];
   var preset = "";
   try { preset = localStorage.getItem("preset") || ""; } catch (e) { /* sin preset */ }
 
-  log("1/3 Exportando el audio de la secuencia...");
-  evalScript("subt_exportarAudio(" + comillas(preset) + ")")
-    .then(function (audio) {
-      rutaAudio = audio;
-      log("2/3 Transcribiendo (la primera vez descarga el modelo, puede tardar)...");
-      var argumentos = [
-        path.join(carpetaExtension(), "subtitular.py"),
-        audio,
-        "--idioma", $("idioma").value,
-        "--modelo", $("modelo").value,
-        "--palabras", $("palabras").value,
-      ];
-      if ($("mayusculas").checked) argumentos.push("--mayusculas");
-      if ($("sinPuntuacion").checked) argumentos.push("--sin-puntuacion");
-      return ejecutarPython(argumentos, function (linea, esError) {
-        // Los avisos de las librerías salen por stderr; solo mostramos lo útil.
-        if (!esError || /error|traceback/i.test(linea)) log(linea, esError ? "error" : null);
-      });
+  conAudioExportado(preset, temporales)
+    .catch(function (e) {
+      if (!e.exportacion) throw e;
+      log(e.message);
+      log("Uso los archivos originales de los clips en su lugar.");
+      log("Tip: silencia (M) la pista de música para que no la transcriba.");
+      return conArchivosOriginales(temporales);
     })
-    .then(function () {
-      var srt = rutaAudio.replace(/\.[^.\\/]+$/, "") + ".srt";
+    .then(function (srt) {
       if (!fs.existsSync(srt)) throw new Error("No se generó el archivo de subtítulos.");
       log("3/3 Poniendo los subtítulos en la secuencia...");
-      return evalScript("subt_importar(" + comillas(srt) + ")");
+      return evalScript("subt_importar(" + comillas(srt) + ")").catch(function (e) {
+        throw new Error(e.message + " El archivo está en: " + srt);
+      });
     })
     .then(function () {
       log("¡Listo! Revisa la nueva pista de subtítulos.", "ok");
@@ -140,7 +182,7 @@ function generar() {
       log("Error: " + e.message, "error");
     })
     .then(function () {
-      if (rutaAudio) { try { fs.unlinkSync(rutaAudio); } catch (e) { /* ya no existe */ } }
+      temporales.forEach(function (f) { try { fs.unlinkSync(f); } catch (e) { /* ya no existe */ } });
       $("generar").disabled = false;
     });
 }
