@@ -144,6 +144,10 @@ function subt_importar(rutaSrt) {
         }
         if (!item) return "ERROR|Importé el .srt pero no lo encuentro en el proyecto.";
 
+        // Premiere 2020 no tiene createCaptionTrack: ahí los subtítulos
+        // se ponen como un clip en una pista de video libre.
+        if (typeof seq.createCaptionTrack !== "function") return subt_ponerEnPistaDeVideo(seq, item, nombre);
+
         var ok;
         if (typeof Sequence !== "undefined" && Sequence.CAPTION_FORMAT_SUBTITLE !== undefined) {
             ok = seq.createCaptionTrack(item, 0, Sequence.CAPTION_FORMAT_SUBTITLE);
@@ -157,4 +161,30 @@ function subt_importar(rutaSrt) {
     } catch (e) {
         return "ERROR|" + e.toString();
     }
+}
+
+function subt_pistaVaciaArriba(seq) {
+    var pistas = seq.videoTracks;
+    var ultimaUsada = -1;
+    for (var i = 0; i < pistas.numTracks; i++) {
+        if (pistas[i].clips.numItems > 0) ultimaUsada = i;
+    }
+    return ultimaUsada + 1 < pistas.numTracks ? pistas[ultimaUsada + 1] : null;
+}
+
+function subt_ponerEnPistaDeVideo(seq, item, nombre) {
+    var pista = subt_pistaVaciaArriba(seq);
+    if (!pista) {
+        // Intentamos crear una pista de video nueva arriba de todo.
+        try {
+            app.enableQE();
+            qe.project.getActiveSequence().addTracks(1, seq.videoTracks.numTracks, 0);
+        } catch (e) { /* sin QE */ }
+        pista = subt_pistaVaciaArriba(seq);
+    }
+    if (!pista) {
+        return "ERROR|Agrega una pista de video vacía arriba de todo y vuelve a pulsar el botón. El .srt ya está en la carpeta Subtitulos del proyecto.";
+    }
+    pista.overwriteClip(item, 0);
+    return "OK|" + nombre;
 }
