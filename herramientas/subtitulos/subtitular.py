@@ -126,12 +126,21 @@ def carpetas_de_fuentes():
             yield Path(os.environ[variable]) / sub
 
 
-def cargar_fuente(nombre, tamano):
+def buscar_fuente(nombre):
+    """Ruta del archivo de fuente: la incluida, la de Windows o la del usuario."""
+    candidatos = [Path(nombre)] + [c / Path(nombre).name for c in carpetas_de_fuentes()]
+    for candidato in candidatos:
+        if candidato.is_file():
+            return str(candidato)
+    return None
+
+
+def cargar_fuente(ruta, tamano):
     from PIL import ImageFont
 
-    candidatos = [nombre] + [str(c / nombre) for c in carpetas_de_fuentes()]
-    candidatos += [FUENTE_POR_DEFECTO, "DejaVuSans-Bold.ttf"]
-    for candidato in candidatos:
+    for candidato in (ruta, buscar_fuente(FUENTE_POR_DEFECTO), "DejaVuSans-Bold.ttf"):
+        if not candidato:
+            continue
         try:
             return ImageFont.truetype(candidato, tamano)
         except OSError:
@@ -139,7 +148,7 @@ def cargar_fuente(nombre, tamano):
     return ImageFont.load_default(tamano)
 
 
-def dibujar_texto(texto, ancho, alto, posicion, nombre_fuente):
+def dibujar_texto(texto, ancho, alto, posicion, nombre_fuente, ruta_fuente):
     """Imagen transparente con el texto en blanco y borde negro."""
     from PIL import Image, ImageDraw
 
@@ -148,7 +157,7 @@ def dibujar_texto(texto, ancho, alto, posicion, nombre_fuente):
         return imagen
     tamano = int(min(ancho, alto) * 0.11)
     while True:
-        fuente = cargar_fuente(nombre_fuente, tamano)
+        fuente = cargar_fuente(ruta_fuente, tamano)
         # Las fuentes finas (Light, Thin) se ven mejor con un borde más delgado.
         fina = re.search(r"light|thin", nombre_fuente, re.I)
         borde = max(2, tamano // (22 if fina else 12))
@@ -164,7 +173,7 @@ def dibujar_texto(texto, ancho, alto, posicion, nombre_fuente):
 
 
 def renderizar_video(grupos, destino, ancho, alto, fps, posicion, nombre_fuente):
-    """Crea un .mov con fondo transparente (códec Animation) con las palabras,
+    """Crea un .mov ProRes 4444 con fondo transparente con las palabras,
     para ponerlo encima del video en Premiere."""
     import av
     import numpy
@@ -176,10 +185,21 @@ def renderizar_video(grupos, destino, ancho, alto, fps, posicion, nombre_fuente)
     tasa = Fraction(fps).limit_denominator(1001)
     total = int((grupos[-1][1] + 0.5) * fps) if grupos else 1
     contenedor = av.open(str(destino), "w", format="mov")
-    stream = contenedor.add_stream("qtrle", rate=tasa)
-    stream.width, stream.height, stream.pix_fmt = ancho, alto, "argb"
+    stream = contenedor.add_stream("prores_ks", rate=tasa)
+    stream.width, stream.height, stream.pix_fmt = ancho, alto, "yuva444p10le"
+    stream.options = {"profile": "4444", "alpha_bits": "16"}
 
-    cuadros = {}
+    # En ProRes cada fotograma es independiente: codificamos cada palabra una
+    # sola vez y repetimos sus bytes mientras dure en pantalla (mucho más rápido).
+    ruta_fuente = buscar_fuente(nombre_fuente)
+    if ruta_fuente:
+        print(f"Fuente: {ruta_fuente}")
+    else:
+        print(f"AVISO: no encontré la fuente {nombre_fuente}, uso Arial.")
+        nombre_fuente = FUENTE_POR_DEFECTO
+        ruta_fuente = buscar_fuente(FUENTE_POR_DEFECTO)
+
+    codificados = {}
     actual = 0
     print(f"Creando video de subtítulos ({total} fotogramas)...")
     for n in range(total):
@@ -187,20 +207,22 @@ def renderizar_video(grupos, destino, ancho, alto, fps, posicion, nombre_fuente)
         while actual < len(grupos) and grupos[actual][1] <= t:
             actual += 1
         texto = grupos[actual][2] if actual < len(grupos) and grupos[actual][0] <= t else ""
-        if texto not in cuadros:
-            imagen = dibujar_texto(texto, ancho, alto, posicion, nombre_fuente)
+        if texto not in codificados:
+            imagen = dibujar_texto(texto, ancho, alto, posicion, nombre_fuente, ruta_fuente)
             # from_image descarta la transparencia; por eso pasamos los píxeles RGBA.
-            rgba = numpy.asarray(imagen)
-            cuadros[texto] = av.VideoFrame.from_ndarray(rgba, format="rgba").reformat(format="argb")
-        cuadro = cuadros[texto]
-        cuadro.pts = n
-        cuadro.time_base = 1 / tasa
-        for paquete in stream.encode(cuadro):
-            contenedor.mux(paquete)
+            cuadro = av.VideoFrame.from_ndarray(numpy.asarray(imagen), format="rgba")
+            cuadro = cuadro.reformat(format="yuva444p10le")
+            cuadro.pts = 0
+            cuadro.time_base = 1 / tasa
+            codificados[texto] = b"".join(bytes(p) for p in stream.encode(cuadro))
+        paquete = av.Packet(codificados[texto])
+        paquete.stream = stream
+        paquete.time_base = 1 / tasa
+        paquete.pts = paquete.dts = n
+        paquete.is_keyframe = True
+        contenedor.mux(paquete)
         if n % 300 == 0:
             print(f"  {n * 100 // total}%")
-    for paquete in stream.encode():
-        contenedor.mux(paquete)
     contenedor.close()
     print(f"Listo: {destino}")
     print(f"VIDEO: {destino}")  # el panel de Premiere lee esta línea

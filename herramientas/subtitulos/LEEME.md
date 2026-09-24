@@ -21,7 +21,7 @@ Si cambias algo en esta carpeta, vuelve a ejecutar `instalar_panel.bat` para act
 2. Elige las opciones en el panel y pulsa **Subtitular secuencia activa**.
 3. El panel exporta el audio, lo transcribe y crea una **pista de subtítulos nueva** en la secuencia. El `.srt` queda en la carpeta *Subtitulos* del proyecto.
 
-**En Premiere 2020 o anterior** los subtítulos importados no se ven en la vista previa. Por eso ahí el panel crea un **video transparente** (`.mov`) con las palabras en blanco con borde negro y lo pone en una pista de video encima de tu video. Se ve sin configurar nada y sale al exportar. Para moverlo o cambiarle el tamaño usa *Controles de efectos > Movimiento*.
+**En Premiere 2020 o anterior** los subtítulos importados no se ven en la vista previa. Por eso ahí el panel crea un **video transparente** (`.mov` ProRes 4444) con las palabras en blanco con borde negro y lo pone en una pista de video encima de tu video. Se ve sin configurar nada y sale al exportar. Para moverlo o cambiarle el tamaño usa *Controles de efectos > Movimiento*.
 
 La fuente (Poppins Light o Arial Negrita) y la posición se eligen en el panel. Para cambiarlas en subtítulos que ya hiciste, sin transcribir de nuevo, usa el botón **Cambiar fuente/posición a subtítulos ya hechos** y elige el `.srt` de la carpeta *Subtitulos*. Poppins viene incluida (licencia libre SIL OFL, en la carpeta `fuentes`).
 
