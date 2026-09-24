@@ -23,7 +23,7 @@ Si cambias algo en esta carpeta, vuelve a ejecutar `instalar_panel.bat` para act
 
 **En Premiere 2020 o anterior** los subtítulos importados no se ven en la vista previa. Por eso ahí el panel crea un **video transparente** (`.mov` ProRes 4444) con las palabras en blanco con borde negro y lo pone en una pista de video encima de tu video. Se ve sin configurar nada y sale al exportar. Para moverlo o cambiarle el tamaño usa *Controles de efectos > Movimiento*.
 
-La fuente (Poppins Light o Arial Negrita) y la posición se eligen en el panel. Para cambiarlas en subtítulos que ya hiciste, sin transcribir de nuevo, usa el botón **Cambiar fuente/posición a subtítulos ya hechos** y elige el `.srt` de la carpeta *Subtitulos*. Poppins viene incluida (licencia libre SIL OFL, en la carpeta `fuentes`).
+La fuente (Poppins Light o Arial Negrita), la posición y el borde negro se eligen en el panel. Para cambiarlas en subtítulos que ya hiciste, sin transcribir de nuevo, usa el botón **Cambiar estilo a subtítulos ya hechos** y elige el `.srt` de la carpeta *Subtitulos*. Poppins viene incluida (licencia libre SIL OFL, en la carpeta `fuentes`).
 
 La primera vez tarda más porque descarga el modelo. Mientras se exporta el audio, Premiere se queda congelado unos segundos. Es normal.
 

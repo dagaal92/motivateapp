@@ -148,8 +148,8 @@ def cargar_fuente(ruta, tamano):
     return ImageFont.load_default(tamano)
 
 
-def dibujar_texto(texto, ancho, alto, posicion, nombre_fuente, ruta_fuente):
-    """Imagen transparente con el texto en blanco y borde negro."""
+def dibujar_texto(texto, ancho, alto, posicion, nombre_fuente, ruta_fuente, con_borde=True):
+    """Imagen transparente con el texto en blanco (con o sin borde negro)."""
     from PIL import Image, ImageDraw
 
     imagen = Image.new("RGBA", (ancho, alto), (0, 0, 0, 0))
@@ -160,7 +160,7 @@ def dibujar_texto(texto, ancho, alto, posicion, nombre_fuente, ruta_fuente):
         fuente = cargar_fuente(ruta_fuente, tamano)
         # Las fuentes finas (Light, Thin) se ven mejor con un borde más delgado.
         fina = re.search(r"light|thin", nombre_fuente, re.I)
-        borde = max(2, tamano // (22 if fina else 12))
+        borde = max(2, tamano // (22 if fina else 12)) if con_borde else 0
         dibujo = ImageDraw.Draw(imagen)
         x0, y0, x1, y1 = dibujo.textbbox((0, 0), texto, font=fuente, stroke_width=borde)
         if x1 - x0 <= ancho * 0.9 or tamano <= 12:
@@ -172,7 +172,7 @@ def dibujar_texto(texto, ancho, alto, posicion, nombre_fuente, ruta_fuente):
     return imagen
 
 
-def renderizar_video(grupos, destino, ancho, alto, fps, posicion, nombre_fuente):
+def renderizar_video(grupos, destino, ancho, alto, fps, posicion, nombre_fuente, con_borde=True):
     """Crea un .mov ProRes 4444 con fondo transparente con las palabras,
     para ponerlo encima del video en Premiere."""
     import av
@@ -208,7 +208,7 @@ def renderizar_video(grupos, destino, ancho, alto, fps, posicion, nombre_fuente)
             actual += 1
         texto = grupos[actual][2] if actual < len(grupos) and grupos[actual][0] <= t else ""
         if texto not in codificados:
-            imagen = dibujar_texto(texto, ancho, alto, posicion, nombre_fuente, ruta_fuente)
+            imagen = dibujar_texto(texto, ancho, alto, posicion, nombre_fuente, ruta_fuente, con_borde)
             # from_image descarta la transparencia; por eso pasamos los píxeles RGBA.
             cuadro = av.VideoFrame.from_ndarray(numpy.asarray(imagen), format="rgba")
             cuadro = cuadro.reformat(format="yuva444p10le")
@@ -271,6 +271,7 @@ def main():
         help="Crear también un .mov transparente con las palabras (para Premiere 2020 y anteriores)",
     )
     parser.add_argument("--posicion", type=float, default=70, help="Altura del texto en %% (0 arriba, 100 abajo)")
+    parser.add_argument("--sin-borde", action="store_true", help="Texto sin el borde negro")
     parser.add_argument("--fuente", default=FUENTE_POR_DEFECTO, help="Archivo de fuente, ej. Poppins-Light.ttf")
     parser.add_argument("--desde-srt", help="Volver a crear el video de un .srt ya hecho (sin transcribir)")
     args = parser.parse_args()
@@ -284,7 +285,7 @@ def main():
         ancho, alto, fps = args.video
         # Nombre nuevo: el video anterior puede estar en uso en Premiere.
         destino = Path(args.desde_srt).with_name(f"{Path(args.desde_srt).stem}_{int(time.time())}.mov")
-        renderizar_video(grupos, destino, int(ancho), int(alto), fps, args.posicion, args.fuente)
+        renderizar_video(grupos, destino, int(ancho), int(alto), fps, args.posicion, args.fuente, not args.sin_borde)
         return
 
     print(f"Cargando modelo '{args.modelo}' (la primera vez se descarga, tarda un poco)...")
@@ -296,7 +297,7 @@ def main():
         print(f"Listo: {destino} ({len(grupos)} subtítulos)")
         if args.video:
             ancho, alto, fps = args.video
-            renderizar_video(grupos, Path(destino).with_suffix(".mov"), int(ancho), int(alto), fps, args.posicion, args.fuente)
+            renderizar_video(grupos, Path(destino).with_suffix(".mov"), int(ancho), int(alto), fps, args.posicion, args.fuente, not args.sin_borde)
 
     if args.clips:
         guardar(palabras_de_clips(modelo, args.clips, args.idioma), args.salida)

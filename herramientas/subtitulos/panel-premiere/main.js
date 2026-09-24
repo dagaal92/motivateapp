@@ -4,7 +4,7 @@ var childProcess = nodeRequire("child_process");
 var fs = nodeRequire("fs");
 var path = nodeRequire("path");
 
-var OPCIONES = ["palabras", "idioma", "modelo", "fuente", "posicion", "mayusculas", "sinPuntuacion"];
+var OPCIONES = ["palabras", "idioma", "modelo", "fuente", "posicion", "mayusculas", "sinPuntuacion", "borde"];
 var $ = function (id) { return document.getElementById(id); };
 
 function log(texto, clase) {
@@ -119,6 +119,7 @@ function opcionesEstilo() {
   if (videoSecuencia) {
     argumentos.push("--video", videoSecuencia.ancho, videoSecuencia.alto, videoSecuencia.fps);
     argumentos.push("--posicion", $("posicion").value, "--fuente", $("fuente").value);
+    if (!$("borde").checked) argumentos.push("--sin-borde");
   }
   return argumentos;
 }
