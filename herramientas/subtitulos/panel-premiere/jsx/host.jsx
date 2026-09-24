@@ -83,6 +83,20 @@ function subt_clipsAudio() {
     }
 }
 
+// Tamaño y fotogramas por segundo de la secuencia, y si esta versión de
+// Premiere puede crear pistas de subtítulos (2021 en adelante).
+function subt_info() {
+    try {
+        var seq = app.project.activeSequence;
+        if (!seq) return "ERROR|Abre (activa) la secuencia que quieres subtitular.";
+        var fps = 254016000000 / Number(seq.timebase);
+        var subtitulos = typeof seq.createCaptionTrack === "function" ? 1 : 0;
+        return "OK|" + [seq.frameSizeHorizontal, seq.frameSizeVertical, fps, subtitulos].join("|");
+    } catch (e) {
+        return "ERROR|" + e.toString();
+    }
+}
+
 function subt_exportarAudio(presetManual) {
     try {
         var seq = app.project.activeSequence;
@@ -117,6 +131,7 @@ function subt_elegirPreset() {
     return f ? "OK|" + f.fsName : "ERROR|cancelado";
 }
 
+// Importa el .srt (pista de subtítulos) o el .mov transparente (pista de video).
 function subt_importar(rutaSrt) {
     try {
         var seq = app.project.activeSequence;
@@ -137,16 +152,16 @@ function subt_importar(rutaSrt) {
         var item = null;
         for (var j = bin.children.numItems - 1; j >= 0; j--) {
             var c = bin.children[j];
-            if (c.name === nombre || c.name === nombre.replace(/\.srt$/i, "")) {
+            if (c.name === nombre || c.name === nombre.replace(/\.(srt|mov)$/i, "")) {
                 item = c;
                 break;
             }
         }
         if (!item) return "ERROR|Importé el .srt pero no lo encuentro en el proyecto.";
 
-        // Premiere 2020 no tiene createCaptionTrack: ahí los subtítulos
-        // se ponen como un clip en una pista de video libre.
-        if (typeof seq.createCaptionTrack !== "function") return subt_ponerEnPistaDeVideo(seq, item, nombre);
+        // El .mov (y en Premiere 2020, que no tiene createCaptionTrack, también
+        // el .srt) se pone como clip en una pista de video libre.
+        if (/\.mov$/i.test(nombre) || typeof seq.createCaptionTrack !== "function") return subt_ponerEnPistaDeVideo(seq, item, nombre);
 
         var ok;
         if (typeof Sequence !== "undefined" && Sequence.CAPTION_FORMAT_SUBTITLE !== undefined) {
@@ -183,7 +198,7 @@ function subt_ponerEnPistaDeVideo(seq, item, nombre) {
         pista = subt_pistaVaciaArriba(seq);
     }
     if (!pista) {
-        return "ERROR|Agrega una pista de video vacía arriba de todo y vuelve a pulsar el botón. El .srt ya está en la carpeta Subtitulos del proyecto.";
+        return "ERROR|Agrega una pista de video vacía arriba de todo y arrastra ahí " + nombre + " (está en la carpeta Subtitulos del proyecto).";
     }
     pista.overwriteClip(item, 0);
     return "OK|" + nombre;

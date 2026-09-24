@@ -114,6 +114,84 @@ def escribir_srt(grupos, destino):
             f.write(f"{n}\n{formato_tiempo(inicio)} --> {formato_tiempo(fin)}\n{texto}\n\n")
 
 
+FUENTES = ["arialbd.ttf", "Arial Bold.ttf", "DejaVuSans-Bold.ttf"]
+
+
+def cargar_fuente(tamano):
+    from PIL import ImageFont
+
+    for nombre in FUENTES:
+        try:
+            return ImageFont.truetype(nombre, tamano)
+        except OSError:
+            continue
+    return ImageFont.load_default(tamano)
+
+
+def dibujar_texto(texto, ancho, alto, posicion):
+    """Imagen transparente con el texto en blanco y borde negro."""
+    from PIL import Image, ImageDraw
+
+    imagen = Image.new("RGBA", (ancho, alto), (0, 0, 0, 0))
+    if not texto:
+        return imagen
+    tamano = int(min(ancho, alto) * 0.11)
+    while True:
+        fuente = cargar_fuente(tamano)
+        borde = max(2, tamano // 12)
+        dibujo = ImageDraw.Draw(imagen)
+        x0, y0, x1, y1 = dibujo.textbbox((0, 0), texto, font=fuente, stroke_width=borde)
+        if x1 - x0 <= ancho * 0.9 or tamano <= 12:
+            break
+        tamano = int(tamano * 0.9)
+    x = (ancho - (x1 - x0)) / 2 - x0
+    y = alto * posicion / 100 - (y1 - y0) / 2 - y0
+    dibujo.text((x, y), texto, font=fuente, fill="white", stroke_width=borde, stroke_fill="black")
+    return imagen
+
+
+def renderizar_video(grupos, destino, ancho, alto, fps, posicion):
+    """Crea un .mov con fondo transparente (códec Animation) con las palabras,
+    para ponerlo encima del video en Premiere."""
+    import av
+    import numpy
+    from fractions import Fraction
+
+    # Para texto no hace falta más de ~30 fps (tu secuencia puede ser de 120).
+    while fps > 31:
+        fps /= 2
+    tasa = Fraction(fps).limit_denominator(1001)
+    total = int((grupos[-1][1] + 0.5) * fps) if grupos else 1
+    contenedor = av.open(str(destino), "w", format="mov")
+    stream = contenedor.add_stream("qtrle", rate=tasa)
+    stream.width, stream.height, stream.pix_fmt = ancho, alto, "argb"
+
+    cuadros = {}
+    actual = 0
+    print(f"Creando video de subtítulos ({total} fotogramas)...")
+    for n in range(total):
+        t = n / fps
+        while actual < len(grupos) and grupos[actual][1] <= t:
+            actual += 1
+        texto = grupos[actual][2] if actual < len(grupos) and grupos[actual][0] <= t else ""
+        if texto not in cuadros:
+            imagen = dibujar_texto(texto, ancho, alto, posicion)
+            # from_image descarta la transparencia; por eso pasamos los píxeles RGBA.
+            rgba = numpy.asarray(imagen)
+            cuadros[texto] = av.VideoFrame.from_ndarray(rgba, format="rgba").reformat(format="argb")
+        cuadro = cuadros[texto]
+        cuadro.pts = n
+        cuadro.time_base = 1 / tasa
+        for paquete in stream.encode(cuadro):
+            contenedor.mux(paquete)
+        if n % 300 == 0:
+            print(f"  {n * 100 // total}%")
+    for paquete in stream.encode():
+        contenedor.mux(paquete)
+    contenedor.close()
+    print(f"Listo: {destino}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Subtítulos palabra por palabra para Premiere.")
     parser.add_argument("archivos", nargs="*", help="Videos o audios a subtitular")
@@ -128,6 +206,14 @@ def main():
     parser.add_argument("--palabras", type=int, default=1, help="Palabras por subtítulo (por defecto: 1)")
     parser.add_argument("--mayusculas", action="store_true", help="Escribir todo en MAYÚSCULAS")
     parser.add_argument("--sin-puntuacion", action="store_true", help="Quitar comas, puntos, etc.")
+    parser.add_argument(
+        "--video",
+        nargs=3,
+        type=float,
+        metavar=("ANCHO", "ALTO", "FPS"),
+        help="Crear también un .mov transparente con las palabras (para Premiere 2020 y anteriores)",
+    )
+    parser.add_argument("--posicion", type=float, default=70, help="Altura del texto en %% (0 arriba, 100 abajo)")
     args = parser.parse_args()
 
     print(f"Cargando modelo '{args.modelo}' (la primera vez se descarga, tarda un poco)...")
@@ -137,6 +223,9 @@ def main():
         grupos = agrupar(palabras, max(1, args.palabras), args.mayusculas, args.sin_puntuacion)
         escribir_srt(grupos, destino)
         print(f"Listo: {destino} ({len(grupos)} subtítulos)")
+        if args.video:
+            ancho, alto, fps = args.video
+            renderizar_video(grupos, Path(destino).with_suffix(".mov"), int(ancho), int(alto), fps, args.posicion)
 
     if args.clips:
         guardar(palabras_de_clips(modelo, args.clips, args.idioma), args.salida)

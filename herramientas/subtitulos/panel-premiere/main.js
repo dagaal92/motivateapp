@@ -4,7 +4,7 @@ var childProcess = nodeRequire("child_process");
 var fs = nodeRequire("fs");
 var path = nodeRequire("path");
 
-var OPCIONES = ["palabras", "idioma", "modelo", "mayusculas", "sinPuntuacion"];
+var OPCIONES = ["palabras", "idioma", "modelo", "posicion", "mayusculas", "sinPuntuacion"];
 var $ = function (id) { return document.getElementById(id); };
 
 function log(texto, clase) {
@@ -99,6 +99,10 @@ function ejecutarPython(argumentos, alSalirTexto) {
   });
 }
 
+// En Premiere 2020 y anteriores los subtítulos importados no se ven bien, así
+// que creamos un video transparente con las palabras. Aquí van sus medidas.
+var videoSecuencia = null;
+
 function opcionesPython() {
   var argumentos = [
     "--idioma", $("idioma").value,
@@ -107,6 +111,10 @@ function opcionesPython() {
   ];
   if ($("mayusculas").checked) argumentos.push("--mayusculas");
   if ($("sinPuntuacion").checked) argumentos.push("--sin-puntuacion");
+  if (videoSecuencia) {
+    argumentos.push("--video", videoSecuencia.ancho, videoSecuencia.alto, videoSecuencia.fps);
+    argumentos.push("--posicion", $("posicion").value);
+  }
   return argumentos;
 }
 
@@ -159,7 +167,12 @@ function generar() {
   var preset = "";
   try { preset = localStorage.getItem("preset") || ""; } catch (e) { /* sin preset */ }
 
-  conAudioExportado(preset, temporales)
+  evalScript("subt_info()")
+    .then(function (info) {
+      var datos = info.split("|");
+      videoSecuencia = datos[3] === "1" ? null : { ancho: datos[0], alto: datos[1], fps: datos[2] };
+      return conAudioExportado(preset, temporales);
+    })
     .catch(function (e) {
       if (!e.exportacion) throw e;
       log(e.message);
@@ -168,15 +181,21 @@ function generar() {
       return conArchivosOriginales(temporales);
     })
     .then(function (srt) {
-      if (!fs.existsSync(srt)) throw new Error("No se generó el archivo de subtítulos.");
+      var archivo = videoSecuencia ? srt.replace(/\.srt$/i, ".mov") : srt;
+      if (!fs.existsSync(archivo)) throw new Error("No se generó el archivo de subtítulos.");
       log("3/3 Poniendo los subtítulos en la secuencia...");
-      return evalScript("subt_importar(" + comillas(srt) + ")").catch(function (e) {
-        throw new Error(e.message + " El archivo está en: " + srt);
+      return evalScript("subt_importar(" + comillas(archivo) + ")").catch(function (e) {
+        throw new Error(e.message + " El archivo está en: " + archivo);
       });
     })
     .then(function () {
-      log("¡Listo! Revisa la nueva pista de subtítulos.", "ok");
-      log("Tip: dale estilo a uno y guárdalo como Estilo de pista para aplicarlo a todos.");
+      if (videoSecuencia) {
+        log("¡Listo! Los subtítulos están en una pista de video encima de tu video.", "ok");
+        log("Tip: con Efectos > Movimiento puedes cambiar su tamaño y posición.");
+      } else {
+        log("¡Listo! Revisa la nueva pista de subtítulos.", "ok");
+        log("Tip: dale estilo a uno y guárdalo como Estilo de pista para aplicarlo a todos.");
+      }
     })
     .catch(function (e) {
       log("Error: " + e.message, "error");

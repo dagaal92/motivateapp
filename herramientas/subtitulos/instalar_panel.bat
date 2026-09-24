@@ -8,7 +8,7 @@ REM Permite paneles no firmados (necesario para paneles propios).
 for %%v in (9 10 11 12 13 14) do reg add "HKCU\Software\Adobe\CSXS.%%v" /v PlayerDebugMode /t REG_SZ /d 1 /f >nul
 
 echo Instalando el reconocimiento de voz...
-py -m pip install --upgrade faster-whisper
+py -m pip install --upgrade faster-whisper pillow numpy
 
 echo.
 echo Listo. Cierra y vuelve a abrir Premiere y ve a:

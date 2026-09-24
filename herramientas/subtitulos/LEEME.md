@@ -21,6 +21,8 @@ Si cambias algo en esta carpeta, vuelve a ejecutar `instalar_panel.bat` para act
 2. Elige las opciones en el panel y pulsa **Subtitular secuencia activa**.
 3. El panel exporta el audio, lo transcribe y crea una **pista de subtítulos nueva** en la secuencia. El `.srt` queda en la carpeta *Subtitulos* del proyecto.
 
+**En Premiere 2020 o anterior** los subtítulos importados no se ven en la vista previa. Por eso ahí el panel crea un **video transparente** (`.mov`) con las palabras en blanco con borde negro y lo pone en una pista de video encima de tu video. Se ve sin configurar nada y sale al exportar. Para moverlo o cambiarle el tamaño usa *Controles de efectos > Movimiento*.
+
 La primera vez tarda más porque descarga el modelo. Mientras se exporta el audio, Premiere se queda congelado unos segundos. Es normal.
 
 Si sale un error de exportación, pulsa **Elegir preset de audio** y selecciona un preset `.epr` de audio (por ejemplo, en `C:\Program Files\Adobe\Adobe Premiere Pro 20XX\MediaIO\systempresets`). El panel lo recuerda.
