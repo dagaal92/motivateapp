@@ -49,7 +49,7 @@ def limpiar_ruido(audio, fuerza):
     if fuerza <= 0:
         return audio
     limpio = noisereduce.reduce_noise(
-        y=audio, sr=FRECUENCIA, stationary=True, prop_decrease=fuerza, n_jobs=-1
+        y=audio, sr=FRECUENCIA, stationary=True, prop_decrease=fuerza,
     )
     return limpio.astype(numpy.float32)
 
