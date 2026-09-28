@@ -1,5 +1,5 @@
 @echo off
-REM Arrastra uno o varios videos sobre este archivo.
+REM Doble clic: se abre una ventana para elegir el video. (Tambien puedes arrastrar videos encima.)
 REM Opciones (cambialas a tu gusto):
 REM   --silencio 0.4  solo corta silencios de mas de 0.4 segundos
 REM   --margen 0.15   aire que se deja antes y despues de cada frase

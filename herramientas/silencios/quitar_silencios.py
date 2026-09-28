@@ -203,9 +203,25 @@ def procesar(ruta, args):
     print(f"  Importa en Premiere: {xml}")
 
 
+def elegir_videos():
+    """Ventana de Windows para elegir los videos (si no se arrastraron)."""
+    import tkinter
+    from tkinter import filedialog
+
+    ventana = tkinter.Tk()
+    ventana.withdraw()
+    ventana.attributes("-topmost", True)
+    archivos = filedialog.askopenfilenames(
+        title="Elige el video (o varios) al que quieres quitarle los silencios",
+        filetypes=[("Videos", "*.mp4 *.mov *.m4v *.avi *.mkv *.MP4 *.MOV"), ("Todos", "*.*")],
+    )
+    ventana.destroy()
+    return list(archivos)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Quita ruido y silencios de videos para Premiere.")
-    parser.add_argument("videos", nargs="+", help="Videos a procesar")
+    parser.add_argument("videos", nargs="*", help="Videos a procesar (si no pones ninguno, se abre una ventana)")
     parser.add_argument(
         "--silencio", type=float, default=0.4,
         help="Solo corta silencios más largos que esto, en segundos (por defecto: 0.4)",
@@ -220,7 +236,12 @@ def main():
     )
     args = parser.parse_args()
 
-    for video in args.videos:
+    videos = args.videos or elegir_videos()
+    if not videos:
+        print("No elegiste ningún video.")
+        return
+
+    for video in videos:
         ruta = Path(video)
         if not ruta.exists():
             print(f"No encuentro el archivo: {ruta}")

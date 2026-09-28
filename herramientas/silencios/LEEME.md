@@ -9,7 +9,7 @@ Limpia la voz (reduce ruido de ventiladores, calle, zumbidos) y corta los silenc
 
 ## Uso
 
-1. **Arrastra el video original sobre `quitar_silencios.bat`**. Puedes arrastrar varios.
+1. **Doble clic en `quitar_silencios.bat`**. Se abre una ventana: elige tu video y pulsa *Abrir*. Puedes elegir varios con Ctrl.
 2. Al lado del video aparecen dos archivos:
    - `video_limpio.wav`: el audio completo con el ruido reducido.
    - `video_cortado.xml`: la secuencia sin silencios.
