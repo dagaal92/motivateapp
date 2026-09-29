@@ -208,3 +208,46 @@ function subt_ponerEnPistaDeVideo(seq, item, nombre) {
     pista.overwriteClip(item, 0);
     return "OK|" + nombre;
 }
+
+// ---- Quitar silencios ----
+
+// Video original de la secuencia activa (primer clip de V1). Si no hay, se elige a mano.
+function subt_videoDeSecuencia() {
+    try {
+        var seq = app.project.activeSequence;
+        if (seq && seq.videoTracks.numTracks > 0) {
+            var clips = seq.videoTracks[0].clips;
+            for (var i = 0; i < clips.numItems; i++) {
+                var item = clips[i].projectItem;
+                var ruta = item && item.getMediaPath ? item.getMediaPath() : "";
+                if (ruta && new File(ruta).exists) return "OK|" + ruta;
+            }
+        }
+        var f = File.openDialog("Elige el video al que quieres quitarle los silencios");
+        return f ? "OK|" + f.fsName : "ERROR|cancelado";
+    } catch (e) {
+        return "ERROR|" + e.toString();
+    }
+}
+
+// Importa el .xml con la secuencia sin silencios y la abre.
+function subt_importarSecuencia(rutaXml, nombre) {
+    try {
+        var antes = app.project.sequences.numSequences;
+        app.project.importFiles([rutaXml], true, app.project.rootItem, false);
+        var secuencias = app.project.sequences;
+        var nueva = null;
+        for (var i = secuencias.numSequences - 1; i >= 0; i--) {
+            if (secuencias[i].name === nombre) {
+                nueva = secuencias[i];
+                break;
+            }
+        }
+        if (!nueva && secuencias.numSequences > antes) nueva = secuencias[secuencias.numSequences - 1];
+        if (!nueva) return "ERROR|Importé el archivo pero no encuentro la secuencia nueva. Búscala en el panel Proyecto.";
+        app.project.openSequence(nueva.sequenceID);
+        return "OK|" + nueva.name;
+    } catch (e) {
+        return "ERROR|" + e.toString();
+    }
+}

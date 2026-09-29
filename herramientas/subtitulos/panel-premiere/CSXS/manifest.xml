@@ -32,10 +32,10 @@
         </Lifecycle>
         <UI>
           <Type>Panel</Type>
-          <Menu>Subtitulos palabra por palabra</Menu>
+          <Menu>Subtitulos y silencios</Menu>
           <Geometry>
             <Size>
-              <Height>460</Height>
+              <Height>620</Height>
               <Width>320</Width>
             </Size>
             <MinSize>

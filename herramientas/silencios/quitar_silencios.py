@@ -213,11 +213,13 @@ def procesar(ruta, args):
     ancho, alto, fps, duracion = info_video(ruta)
     duracion = duracion or len(audio) / FRECUENCIA
     xml = ruta.with_name(ruta.stem + "_cortado.xml")
-    nueva = escribir_xml(xml, ruta.stem + " sin silencios", ruta, wav, tramos, ancho, alto, fps, duracion)
+    nueva = escribir_xml(xml, f"{ruta.stem} sin silencios", ruta, wav, tramos, ancho, alto, fps, duracion)
 
     print(f"  Listo: {len(tramos)} tramos con voz.")
     print(f"  Duración: {duracion:.1f} s -> {nueva:.1f} s (quité {duracion - nueva:.1f} s de silencio)")
     print(f"  Importa en Premiere: {xml}")
+    print(f"XML: {xml}")  # el panel de Premiere lee estas dos líneas
+    print(f"SECUENCIA: {ruta.stem} sin silencios")
 
 
 def elegir_videos():

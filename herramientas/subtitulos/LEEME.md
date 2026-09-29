@@ -10,7 +10,7 @@ Hay dos formas de usarlo: **el panel dentro de Premiere** (recomendado) o arrast
 
 1. Instala **Python** desde https://www.python.org/downloads/ y marca **"Add Python to PATH"**.
 2. Cierra Premiere y haz doble clic en **`instalar_panel.bat`**.
-3. Abre Premiere y ve a **Ventana > Extensiones (heredado) > Subtitulos palabra por palabra**
+3. Abre Premiere y ve a **Ventana > Extensiones (heredado) > Subtitulos y silencios**
    (en versiones anteriores: **Ventana > Extensiones**).
 
 Si cambias algo en esta carpeta, vuelve a ejecutar `instalar_panel.bat` para actualizar el panel.
@@ -28,6 +28,14 @@ La fuente (Poppins Light o Arial Negrita), la posición y el borde negro se elig
 La primera vez tarda más porque descarga el modelo. Mientras se exporta el audio, Premiere se queda congelado unos segundos. Es normal.
 
 Si sale un error de exportación, pulsa **Elegir preset de audio** y selecciona un preset `.epr` de audio (por ejemplo, en `C:\Program Files\Adobe\Adobe Premiere Pro 20XX\MediaIO\systempresets`). El panel lo recuerda.
+
+### Quitar silencios desde el panel
+
+El panel también tiene la sección **Quitar silencios** (usa `../silencios/quitar_silencios.py`, que `instalar_panel.bat` copia al panel):
+
+1. Abre una secuencia con tu video original en V1.
+2. Elige desde cuántos segundos cortar silencios y si quieres limpiar el ruido de fondo.
+3. Pulsa **Quitar silencios del video de la secuencia**. Se crea y se abre una secuencia nueva *"… sin silencios"* con los cortes hechos. Tu secuencia original no se toca.
 
 ## Opción B: arrastrar videos sobre un .bat
 

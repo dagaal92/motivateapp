@@ -4,7 +4,7 @@ var childProcess = nodeRequire("child_process");
 var fs = nodeRequire("fs");
 var path = nodeRequire("path");
 
-var OPCIONES = ["palabras", "idioma", "modelo", "fuente", "posicion", "mayusculas", "sinPuntuacion", "borde"];
+var OPCIONES = ["palabras", "idioma", "modelo", "fuente", "posicion", "mayusculas", "sinPuntuacion", "borde", "silencio", "limpiarRuido"];
 var $ = function (id) { return document.getElementById(id); };
 
 function log(texto, clase) {
@@ -254,6 +254,47 @@ function cambiarEstilo() {
     });
 }
 
+// Crea una secuencia nueva sin silencios a partir del video de la secuencia activa.
+function quitarSilencios() {
+  guardarOpciones();
+  $("silencios").disabled = true;
+  $("log").innerHTML = "";
+  var xml = null;
+  var nombre = null;
+  log("Buscando el video de la secuencia...");
+  evalScript("subt_videoDeSecuencia()")
+    .then(function (video) {
+      log("Video: " + path.basename(video));
+      var argumentos = [
+        path.join(carpetaExtension(), "quitar_silencios.py"), video,
+        "--silencio", $("silencio").value,
+        "--margen", "0.15",
+        "--ruido", $("limpiarRuido").checked ? "0.8" : "0",
+      ];
+      return ejecutarPython(argumentos, function (linea, esError) {
+        if (/^XML: /.test(linea)) xml = linea.slice(5);
+        else if (/^SECUENCIA: /.test(linea)) nombre = linea.slice(11);
+        else if (/Importa en Premiere/.test(linea)) return; // eso lo hace el panel solo
+        else if (!esError || /error|traceback/i.test(linea)) log(linea.trim(), esError ? "error" : null);
+      });
+    })
+    .then(function () {
+      if (!xml || !fs.existsSync(xml)) throw new Error("No se creó la secuencia (revisa los mensajes de arriba).");
+      log("Abriendo la secuencia nueva en Premiere...");
+      return evalScript("subt_importarSecuencia(" + comillas(xml) + ", " + JSON.stringify(nombre) + ")");
+    })
+    .then(function (secuencia) {
+      log("¡Listo! Se abrió la secuencia \"" + secuencia + "\".", "ok");
+      log("Tip: si un corte quedó justo, alarga el clip desde su borde.");
+    })
+    .catch(function (e) {
+      if (e.message !== "cancelado") log("Error: " + e.message, "error");
+    })
+    .then(function () {
+      $("silencios").disabled = false;
+    });
+}
+
 function elegirPreset() {
   evalScript("subt_elegirPreset()")
     .then(function (ruta) {
@@ -265,5 +306,6 @@ function elegirPreset() {
 
 leerOpciones();
 $("generar").addEventListener("click", generar);
+$("silencios").addEventListener("click", quitarSilencios);
 $("preset").addEventListener("click", elegirPreset);
 $("restilo").addEventListener("click", cambiarEstilo);

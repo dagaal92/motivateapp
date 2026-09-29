@@ -9,7 +9,9 @@
   select { background: #1b1b1b; color: #ddd; border: 1px solid #444; padding: 3px; width: 55%; }
   button { width: 100%; padding: 8px; margin-top: 8px; border: 0; border-radius: 4px; cursor: pointer; }
   #generar { background: #2d8ceb; color: #fff; font-weight: 600; font-size: 13px; }
-  #generar:disabled { background: #555; cursor: default; }
+  #generar:disabled, #silencios:disabled { background: #555; cursor: default; }
+  #silencios { background: #2d8ceb; color: #fff; font-weight: 600; font-size: 13px; }
+  h3 { font-size: 12px; color: #aaa; border-top: 1px solid #333; margin: 14px 0 4px; padding-top: 10px; }
   #preset, #restilo { background: #3a3a3a; color: #bbb; font-size: 11px; }
   #log { margin-top: 10px; background: #1b1b1b; border: 1px solid #333; height: 180px; overflow-y: auto;
          padding: 6px; white-space: pre-wrap; font: 11px monospace; color: #aaa; }
@@ -17,6 +19,7 @@
 </style>
 </head>
 <body>
+  <h3 style="border:0;margin-top:0;padding-top:0">Subtítulos</h3>
   <label>Palabras por subtítulo
     <select id="palabras"><option>1</option><option>2</option><option>3</option></select>
   </label>
@@ -51,6 +54,19 @@
   <button id="generar">Subtitular secuencia activa</button>
   <button id="restilo">Cambiar estilo a subtítulos ya hechos (sin transcribir)</button>
   <button id="preset">Elegir preset de audio (solo si falla la exportación)</button>
+
+  <h3>Quitar silencios</h3>
+  <label>Cortar silencios de más de
+    <select id="silencio">
+      <option value="0.3">0.3 s (ritmo rápido)</option>
+      <option value="0.4" selected>0.4 s</option>
+      <option value="0.6">0.6 s</option>
+      <option value="1.0">1 s (solo pausas largas)</option>
+    </select>
+  </label>
+  <label>Limpiar ruido de fondo <input type="checkbox" id="limpiarRuido"></label>
+  <button id="silencios">Quitar silencios del video de la secuencia</button>
+
   <div id="log"></div>
 
   <script src="main.js"></script>
