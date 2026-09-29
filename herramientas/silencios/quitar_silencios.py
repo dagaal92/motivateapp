@@ -113,7 +113,8 @@ def xml_tasa(fps):
 
 
 def escribir_xml(destino, nombre, video, wav, tramos, ancho, alto, fps, duracion):
-    """Secuencia en formato Final Cut Pro XML, que Premiere importa directamente."""
+    """Secuencia en formato Final Cut Pro XML, que Premiere importa directamente.
+    Si wav es None se usa el audio original del video (en dos pistas, izquierda y derecha)."""
     tasa = xml_tasa(fps)
     cuadros_archivo = int(round(duracion * fps))
     formato = (
@@ -137,7 +138,7 @@ def escribir_xml(destino, nombre, video, wav, tramos, ancho, alto, fps, duracion
             f"<duration>{cuadros_archivo}</duration><media>{media}</media></file>"
         )
 
-    clips_video, clips_audio = [], []
+    clips_video, clips_audio = [], [[], []]
     posicion = 0
     for n, (inicio, fin) in enumerate(tramos, 1):
         entrada = int(round(inicio * fps))
@@ -154,20 +155,32 @@ def escribir_xml(destino, nombre, video, wav, tramos, ancho, alto, fps, duracion
             f"<duration>{cuadros_archivo}</duration>{comun}"
             f'{archivo("archivo-video", video, True, n == 1)}</clipitem>'
         )
-        clips_audio.append(
-            f'<clipitem id="audio-{n}"><name>{escape(Path(wav).name)}</name>'
-            f"<duration>{cuadros_archivo}</duration>{comun}"
-            f'{archivo("archivo-audio", wav, False, n == 1)}'
-            "<sourcetrack><mediatype>audio</mediatype><trackindex>1</trackindex></sourcetrack>"
-            "</clipitem>"
-        )
+        if wav:
+            clips_audio[0].append(
+                f'<clipitem id="audio-{n}"><name>{escape(Path(wav).name)}</name>'
+                f"<duration>{cuadros_archivo}</duration>{comun}"
+                f'{archivo("archivo-audio", wav, False, n == 1)}'
+                "<sourcetrack><mediatype>audio</mediatype><trackindex>1</trackindex></sourcetrack>"
+                "</clipitem>"
+            )
+        else:
+            for canal in (1, 2):
+                clips_audio[canal - 1].append(
+                    f'<clipitem id="audio{canal}-{n}"><name>{escape(Path(video).name)}</name>'
+                    f"<duration>{cuadros_archivo}</duration>{comun}"
+                    f'{archivo("archivo-video", video, True, False)}'
+                    f"<sourcetrack><mediatype>audio</mediatype><trackindex>{canal}</trackindex></sourcetrack>"
+                    "</clipitem>"
+                )
         posicion += largo
 
     xml = (
         '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE xmeml>\n<xmeml version="4">'
         f"<sequence><name>{escape(nombre)}</name><duration>{posicion}</duration>{tasa}"
         f"<media><video><format>{formato}</format><track>{''.join(clips_video)}</track></video>"
-        f"<audio><format>{audio_formato}</format><track>{''.join(clips_audio)}</track></audio>"
+        f"<audio><format>{audio_formato}</format>"
+        + "".join(f"<track>{''.join(pista)}</track>" for pista in clips_audio if pista)
+        + "</audio>"
         "</media></sequence></xmeml>\n"
     )
     Path(destino).write_text(xml, encoding="utf-8")
@@ -176,23 +189,27 @@ def escribir_xml(destino, nombre, video, wav, tramos, ancho, alto, fps, duracion
 
 def procesar(ruta, args):
     print(f"\n{ruta.name}")
-    print("  1/4 Leyendo el audio...")
+    limpiar = args.ruido > 0
+    pasos = 4 if limpiar else 3
+    print(f"  1/{pasos} Leyendo el audio...")
     audio = leer_audio(ruta)
 
-    print("  2/4 Limpiando el ruido de fondo...")
-    limpio = limpiar_ruido(audio, args.ruido)
-    pico = float(numpy.max(numpy.abs(limpio))) or 1.0
-    limpio = limpio * (0.89 / pico)  # volumen parejo: pico a -1 dB
-    wav = ruta.with_name(ruta.stem + "_limpio.wav")
-    guardar_wav(limpio, wav)
+    wav = None
+    if limpiar:
+        print(f"  2/{pasos} Limpiando el ruido de fondo...")
+        audio = limpiar_ruido(audio, args.ruido)
+        pico = float(numpy.max(numpy.abs(audio))) or 1.0
+        audio = audio * (0.89 / pico)  # volumen parejo: pico a -1 dB
+        wav = ruta.with_name(ruta.stem + "_limpio.wav")
+        guardar_wav(audio, wav)
 
-    print("  3/4 Buscando los silencios...")
-    tramos = detectar_voz(limpio, args.silencio, args.margen)
+    print(f"  {pasos - 1}/{pasos} Buscando los silencios...")
+    tramos = detectar_voz(audio, args.silencio, args.margen)
     if not tramos:
         print("  No encontré voz en este video.")
         return
 
-    print("  4/4 Creando la secuencia para Premiere...")
+    print(f"  {pasos}/{pasos} Creando la secuencia para Premiere...")
     ancho, alto, fps, duracion = info_video(ruta)
     duracion = duracion or len(audio) / FRECUENCIA
     xml = ruta.with_name(ruta.stem + "_cortado.xml")
@@ -232,7 +249,7 @@ def main():
     )
     parser.add_argument(
         "--ruido", type=float, default=0.8,
-        help="Fuerza de la limpieza de ruido de 0 (nada) a 1 (máxima). Por defecto: 0.8",
+        help="Fuerza de la limpieza de ruido de 0 (no limpiar, usa el audio original) a 1 (máxima). Por defecto: 0.8",
     )
     args = parser.parse_args()
 

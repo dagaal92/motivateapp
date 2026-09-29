@@ -17,6 +17,10 @@ Limpia la voz (reduce ruido de ventiladores, calle, zumbidos) y corta los silenc
 4. Revísala. Si algún corte quedó muy justo, alarga el clip desde el borde (el video completo sigue ahí).
 5. Si quieres subtítulos, usa el panel de subtítulos sobre esta secuencia nueva.
 
+## Solo quitar silencios (sin limpiar el ruido)
+
+Usa **`solo_quitar_silencios.bat`** en vez de `quitar_silencios.bat`. Es más rápido, no crea el `.wav` y la secuencia usa el **audio original** del video. Se importa igual: *Archivo > Importar > video_cortado.xml*.
+
 ## Ajustes
 
 Edita la línea `py ...` dentro de `quitar_silencios.bat`:
