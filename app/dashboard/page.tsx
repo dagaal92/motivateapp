@@ -11,8 +11,11 @@ import {
   PackageCheck,
   Clock,
   Truck,
+  RotateCcw,
+  AlertTriangle,
 } from "lucide-react";
 import PedidosPorMesChart from "@/components/PedidosPorMesChart";
+import DevolucionesPendientesModal from "@/components/DevolucionesPendientesModal";
 
 type Datos = {
   anio: number;
@@ -23,6 +26,8 @@ type Datos = {
   pedidosEntregados: number;
   pedidosPendientes: number;
   totalFletes: number;
+  totalDevoluciones: number;
+  devolucionesPendientes: number;
 };
 
 type PuntoMes = { mes: number; totalPedidos: number };
@@ -50,6 +55,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [serie, setSerie] = useState<PuntoMes[] | null>(null);
   const [serieError, setSerieError] = useState<string | null>(null);
+  const [mostrarDevolucionesPendientes, setMostrarDevolucionesPendientes] = useState(false);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -152,6 +158,28 @@ export default function DashboardPage() {
       ]
     : [];
 
+  const tarjetasDevoluciones = datos
+    ? [
+        {
+          label: "Total devoluciones",
+          valor: fmtNum(datos.totalDevoluciones),
+          sub: "Pedidos con estado \"Devuelto\" en el periodo",
+          icon: RotateCcw,
+          bg: "bg-redSoft",
+          fg: "text-red",
+        },
+        {
+          label: "Pendientes por llegar",
+          valor: fmtNum(datos.devolucionesPendientes),
+          sub: "De cualquier mes — clic para ver el detalle",
+          icon: AlertTriangle,
+          bg: "bg-amberSoft",
+          fg: "text-amber2",
+          onClick: () => setMostrarDevolucionesPendientes(true),
+        },
+      ]
+    : [];
+
   return (
     <main className="p-4 sm:p-6 max-w-[1400px] mx-auto space-y-5">
       <div className="bg-card border border-borderLight rounded-xl p-5">
@@ -235,35 +263,79 @@ export default function DashboardPage() {
         <p className="text-sm text-muted2">Cargando dashboard…</p>
       ) : (
         datos && (
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-            {tarjetas.map((t) => (
-              <div
-                key={t.label}
-                className="bg-card border border-borderLight rounded-xl p-3 sm:p-5"
-              >
-                <div className="flex flex-col sm:flex-row items-start gap-2 sm:gap-3">
-                  <div
-                    className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg ${t.bg} ${t.fg} flex items-center justify-center shrink-0`}
-                  >
-                    <t.icon size={18} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[11px] sm:text-xs font-medium text-muted2 leading-tight">
-                      {t.label}
-                    </p>
-                    <p className="text-lg sm:text-2xl font-semibold text-ink2 mt-0.5 truncate">
-                      {t.valor}
-                    </p>
-                    {t.sub && (
-                      <p className="text-[10px] sm:text-[11px] text-muted2 mt-0.5 leading-tight">
-                        {t.sub}
+          <>
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              {tarjetas.map((t) => (
+                <div
+                  key={t.label}
+                  className="bg-card border border-borderLight rounded-xl p-3 sm:p-5"
+                >
+                  <div className="flex flex-col sm:flex-row items-start gap-2 sm:gap-3">
+                    <div
+                      className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg ${t.bg} ${t.fg} flex items-center justify-center shrink-0`}
+                    >
+                      <t.icon size={18} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[11px] sm:text-xs font-medium text-muted2 leading-tight">
+                        {t.label}
                       </p>
-                    )}
+                      <p className="text-lg sm:text-2xl font-semibold text-ink2 mt-0.5 truncate">
+                        {t.valor}
+                      </p>
+                      {t.sub && (
+                        <p className="text-[10px] sm:text-[11px] text-muted2 mt-0.5 leading-tight">
+                          {t.sub}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted2">
+                Devoluciones
+              </span>
+              <div className="flex-1 h-px bg-borderLight" />
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              {tarjetasDevoluciones.map((t) => (
+                <div
+                  key={t.label}
+                  onClick={t.onClick}
+                  role={t.onClick ? "button" : undefined}
+                  tabIndex={t.onClick ? 0 : undefined}
+                  className={`bg-card border border-borderLight rounded-xl p-3 sm:p-5 ${
+                    t.onClick ? "cursor-pointer hover:border-amber2 transition-colors" : ""
+                  }`}
+                >
+                  <div className="flex flex-col sm:flex-row items-start gap-2 sm:gap-3">
+                    <div
+                      className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg ${t.bg} ${t.fg} flex items-center justify-center shrink-0`}
+                    >
+                      <t.icon size={18} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[11px] sm:text-xs font-medium text-muted2 leading-tight">
+                        {t.label}
+                      </p>
+                      <p className="text-lg sm:text-2xl font-semibold text-ink2 mt-0.5 truncate">
+                        {t.valor}
+                      </p>
+                      {t.sub && (
+                        <p className="text-[10px] sm:text-[11px] text-muted2 mt-0.5 leading-tight">
+                          {t.sub}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )
       )}
 
@@ -271,6 +343,11 @@ export default function DashboardPage() {
         <div className="bg-redSoft text-red text-sm p-4 rounded-md">{serieError}</div>
       )}
       {serie && <PedidosPorMesChart datos={serie} mesSeleccionado={mes} />}
+
+      <DevolucionesPendientesModal
+        abierto={mostrarDevolucionesPendientes}
+        onClose={() => setMostrarDevolucionesPendientes(false)}
+      />
     </main>
   );
 }

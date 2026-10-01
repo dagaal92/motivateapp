@@ -65,6 +65,18 @@ export async function PATCH(
       });
       if (!existente) throw new ErrorValidacion("Pedido no encontrado");
 
+      // "devueltoEn" no lo escribe el usuario: queda la constancia de cuándo
+      // pasó a ser devolución justo en el momento del cambio de estado, para
+      // poder darle seguimiento (cuánto lleva esperando a que regrese). Si
+      // deja de ser una devolución, se limpian las dos fechas asociadas.
+      const estadoNuevo = (data.estado as string | undefined) ?? existente.estado;
+      if (estadoNuevo === "DEVUELTO" && existente.estado !== "DEVUELTO") {
+        data.devueltoEn = new Date();
+      } else if (existente.estado === "DEVUELTO" && estadoNuevo !== "DEVUELTO") {
+        data.devueltoEn = null;
+        data.devolucionRecibidaEn = null;
+      }
+
       if (Array.isArray(productos)) {
         await tx.productoPedido.deleteMany({ where: { pedidoId: params.id } });
         data.productos = {
