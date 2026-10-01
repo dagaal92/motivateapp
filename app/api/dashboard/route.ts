@@ -18,14 +18,21 @@ export async function GET(req: NextRequest) {
 
     const { inicio, fin } = mes ? rangoMesColombia(anio, mes) : rangoAnioColombia(anio);
 
-    const pedidos = await prisma.pedido.findMany({
-      where: { creadoEn: { gte: inicio, lt: fin } },
-      select: {
-        valorTotal: true,
-        estado: true,
-        fletes: { select: { valor: true } },
-      },
-    });
+    const [pedidos, devolucionesPendientes] = await Promise.all([
+      prisma.pedido.findMany({
+        where: { creadoEn: { gte: inicio, lt: fin } },
+        select: {
+          valorTotal: true,
+          estado: true,
+          fletes: { select: { valor: true } },
+        },
+      }),
+      // No se filtra por el rango de fechas a propósito: es la lista de
+      // seguimiento en vivo, sin importar de cuándo sea el pedido original.
+      prisma.pedido.count({
+        where: { estado: "DEVUELTO", devolucionRecibidaEn: null },
+      }),
+    ]);
 
     const totalPedidos = pedidos.length;
     // Total ventas excluye cancelados: son pedidos que no se concretaron.
@@ -42,6 +49,7 @@ export async function GET(req: NextRequest) {
       (sum, p) => sum + p.fletes.reduce((s, f) => s + f.valor, 0),
       0
     );
+    const totalDevoluciones = pedidos.filter((p) => p.estado === "DEVUELTO").length;
 
     return NextResponse.json({
       anio,
@@ -52,6 +60,8 @@ export async function GET(req: NextRequest) {
       pedidosEntregados,
       pedidosPendientes,
       totalFletes,
+      totalDevoluciones,
+      devolucionesPendientes,
     });
   } catch (error) {
     await capturarError(error);

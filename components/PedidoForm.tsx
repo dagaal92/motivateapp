@@ -65,6 +65,7 @@ export default function PedidoForm({ pedidoId }: { pedidoId?: string }) {
     direccion: "",
     notas: "",
     cuentaFleteId: "",
+    devolucionRecibidaEn: "",
   });
 
   const [productos, setProductos] = useState<ProductoLinea[]>([]);
@@ -131,6 +132,9 @@ export default function PedidoForm({ pedidoId }: { pedidoId?: string }) {
           direccion: p.direccion || "",
           notas: p.notas || "",
           cuentaFleteId: p.cuentaFleteId || "",
+          devolucionRecibidaEn: p.devolucionRecibidaEn
+            ? new Date(p.devolucionRecibidaEn).toISOString().slice(0, 10)
+            : "",
         });
         setProductos(
           (p.productos || []).map((pr: any) => ({
@@ -343,6 +347,36 @@ export default function PedidoForm({ pedidoId }: { pedidoId?: string }) {
               ))}
             </select>
           </div>
+          {form.estado === "DEVUELTO" && (
+            <div>
+              <label className={labelCls}>Fecha en que llegó la devolución</label>
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  value={form.devolucionRecibidaEn}
+                  onChange={campo("devolucionRecibidaEn")}
+                  className={inputCls}
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setForm((f) => ({
+                      ...f,
+                      devolucionRecibidaEn: new Date().toISOString().slice(0, 10),
+                    }))
+                  }
+                  className="shrink-0 text-xs font-medium border border-borderLight text-ink2 px-3 rounded-md hover:bg-paper transition-colors whitespace-nowrap"
+                >
+                  Hoy
+                </button>
+              </div>
+              {!form.devolucionRecibidaEn && (
+                <p className="text-[11px] text-amber2 mt-1">
+                  Sin esta fecha, sigue apareciendo en "Pendientes por llegar" del Dashboard.
+                </p>
+              )}
+            </div>
+          )}
           <div>
             <label className={labelCls}>Valor Venta</label>
             <input

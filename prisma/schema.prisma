@@ -154,6 +154,8 @@ model Pedido {
   impreso                  Boolean   @default(false)
   guiaNotificadaEn         DateTime?
   confirmacionNotificadaEn DateTime?
+  devueltoEn               DateTime?
+  devolucionRecibidaEn     DateTime?
 
   notas         String?
   creadoEn      DateTime @default(now())
@@ -167,6 +169,7 @@ model Pedido {
   @@index([cuentaFleteId])
   @@index([general])
   @@index([completadoEn])
+  @@index([devolucionRecibidaEn])
 }
 
 model ProductoPedido {
