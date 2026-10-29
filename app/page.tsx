@@ -65,12 +65,12 @@ const ESTADO_LABEL: Record<EstadoPedido, string> = {
 };
 
 const ESTADO_PILL: Record<EstadoPedido, string> = {
-  PENDIENTE: "bg-accentSoft text-accent",
-  CONFIRMADO: "bg-accentSoft text-accent",
-  EN_CAMINO: "bg-amberSoft text-amber2",
-  ENTREGADO: "bg-greenSoft text-green",
-  CANCELADO: "bg-redSoft text-red",
-  DEVUELTO: "bg-orangeSoft text-orange",
+  PENDIENTE: "bg-amberSoft text-amber2",
+  CONFIRMADO: "bg-greenSoft text-green",
+  EN_CAMINO: "bg-accentSoft text-accent",
+  ENTREGADO: "bg-tealSoft text-teal",
+  CANCELADO: "bg-borderLight text-muted2",
+  DEVUELTO: "bg-redSoft text-red",
 };
 
 const fmtMoney = (n: number) =>
@@ -114,6 +114,7 @@ export default function Home() {
     estadoEnvio: "",
     estadoPedido: "",
     tipoPago: "",
+    incluirArchivados: false,
   });
   const [filtrosAplicados, setFiltrosAplicados] = useState(filtros);
   const [pagina, setPagina] = useState(1);
@@ -226,6 +227,7 @@ export default function Home() {
       estadoEnvio: "",
       estadoPedido: "",
       tipoPago: "",
+      incluirArchivados: false,
     };
     setFiltros(vacio);
     setFiltrosAplicados(vacio);
@@ -250,6 +252,15 @@ export default function Home() {
       if (f.estadoGeneral && (p.general || "") !== f.estadoGeneral) return false;
       if (f.estadoEnvio && (p.envio || "") !== f.estadoEnvio) return false;
       if (f.estadoPedido && p.estado !== f.estadoPedido) return false;
+      // Un pedido "Archivado" ya terminó su ciclo (entregado y pagado), así
+      // que por defecto se oculta de esta vista para no saturarla. Si lo
+      // filtran explícitamente por ese estado general, igual se muestra.
+      if (
+        p.general === "Archivado" &&
+        !f.incluirArchivados &&
+        f.estadoGeneral !== "Archivado"
+      )
+        return false;
       return true;
     });
   }, [pedidos, filtrosAplicados]);
@@ -567,6 +578,21 @@ export default function Home() {
               <option value="COD">Contraentrega</option>
             </select>
           </div>
+        </div>
+
+        <div className="flex items-center gap-2 mt-3">
+          <input
+            type="checkbox"
+            id="incluirArchivados"
+            checked={filtros.incluirArchivados}
+            onChange={(e) =>
+              setFiltros((f) => ({ ...f, incluirArchivados: e.target.checked }))
+            }
+            className="rounded border-borderLight text-accent focus:ring-accent"
+          />
+          <label htmlFor="incluirArchivados" className="text-sm text-ink2">
+            Incluir pedidos archivados
+          </label>
         </div>
 
         <div className="flex items-center justify-end gap-2 mt-4">
