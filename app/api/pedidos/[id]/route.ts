@@ -8,6 +8,7 @@ import { upsertClienteDesdePedido } from "@/lib/clientes";
 import { normalizarNombre, normalizarTelefono } from "@/lib/normalizar";
 import { ErrorValidacion } from "@/lib/errores";
 import { capturarError } from "@/lib/sentry";
+import { esFinanciacionDiferida } from "@/lib/financiacion";
 
 export async function GET(
   _req: NextRequest,
@@ -75,6 +76,18 @@ export async function PATCH(
       } else if (existente.estado === "DEVUELTO" && estadoNuevo !== "DEVUELTO") {
         data.devueltoEn = null;
         data.devolucionRecibidaEn = null;
+      }
+
+      // No se puede archivar mientras la plata siga en manos de Addi o
+      // Sistecrédito: esa plata todavía no ha ingresado de verdad. Se libera
+      // solo cuando cambian "Ingreso Dinero" a la billetera donde cayó.
+      const generalNuevo = (data.general as string | undefined) ?? existente.general;
+      const ingresoDineroVigente =
+        (data.ingresoDinero as string | undefined) ?? existente.ingresoDinero;
+      if (generalNuevo === "Archivado" && esFinanciacionDiferida(ingresoDineroVigente)) {
+        throw new ErrorValidacion(
+          `No se puede archivar: el pedido está financiado con ${ingresoDineroVigente} y esa plata todavía no ha ingresado. Cambia "Ingreso Dinero" cuando se confirme el pago.`
+        );
       }
 
       if (Array.isArray(productos)) {

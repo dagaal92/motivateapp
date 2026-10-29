@@ -13,9 +13,11 @@ import {
   Truck,
   RotateCcw,
   AlertTriangle,
+  Landmark,
 } from "lucide-react";
 import PedidosPorMesChart from "@/components/PedidosPorMesChart";
 import DevolucionesPendientesModal from "@/components/DevolucionesPendientesModal";
+import PorCobrarFinanciacionModal from "@/components/PorCobrarFinanciacionModal";
 
 type Datos = {
   anio: number;
@@ -28,6 +30,8 @@ type Datos = {
   totalFletes: number;
   totalDevoluciones: number;
   devolucionesPendientes: number;
+  totalPorCobrarFinanciacion: number;
+  cantidadPorCobrarFinanciacion: number;
 };
 
 type PuntoMes = { mes: number; totalPedidos: number };
@@ -56,6 +60,7 @@ export default function DashboardPage() {
   const [serie, setSerie] = useState<PuntoMes[] | null>(null);
   const [serieError, setSerieError] = useState<string | null>(null);
   const [mostrarDevolucionesPendientes, setMostrarDevolucionesPendientes] = useState(false);
+  const [mostrarPorCobrarFinanciacion, setMostrarPorCobrarFinanciacion] = useState(false);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -176,6 +181,20 @@ export default function DashboardPage() {
           bg: "bg-amberSoft",
           fg: "text-amber2",
           onClick: () => setMostrarDevolucionesPendientes(true),
+        },
+      ]
+    : [];
+
+  const tarjetasFinanciacion = datos
+    ? [
+        {
+          label: "Por cobrar (financiación)",
+          valor: fmt(datos.totalPorCobrarFinanciacion),
+          sub: `${fmtNum(datos.cantidadPorCobrarFinanciacion)} pedido(s) con Addi/Sistecrédito — clic para ver el detalle`,
+          icon: Landmark,
+          bg: "bg-purpleSoft",
+          fg: "text-purple",
+          onClick: () => setMostrarPorCobrarFinanciacion(true),
         },
       ]
     : [];
@@ -335,6 +354,46 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
+
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted2">
+                Financiación diferida
+              </span>
+              <div className="flex-1 h-px bg-borderLight" />
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              {tarjetasFinanciacion.map((t) => (
+                <div
+                  key={t.label}
+                  onClick={t.onClick}
+                  role="button"
+                  tabIndex={0}
+                  className="bg-card border border-borderLight rounded-xl p-3 sm:p-5 cursor-pointer hover:border-purple transition-colors"
+                >
+                  <div className="flex flex-col sm:flex-row items-start gap-2 sm:gap-3">
+                    <div
+                      className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg ${t.bg} ${t.fg} flex items-center justify-center shrink-0`}
+                    >
+                      <t.icon size={18} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[11px] sm:text-xs font-medium text-muted2 leading-tight">
+                        {t.label}
+                      </p>
+                      <p className="text-lg sm:text-2xl font-semibold text-ink2 mt-0.5 truncate">
+                        {t.valor}
+                      </p>
+                      {t.sub && (
+                        <p className="text-[10px] sm:text-[11px] text-muted2 mt-0.5 leading-tight">
+                          {t.sub}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </>
         )
       )}
@@ -347,6 +406,10 @@ export default function DashboardPage() {
       <DevolucionesPendientesModal
         abierto={mostrarDevolucionesPendientes}
         onClose={() => setMostrarDevolucionesPendientes(false)}
+      />
+      <PorCobrarFinanciacionModal
+        abierto={mostrarPorCobrarFinanciacion}
+        onClose={() => setMostrarPorCobrarFinanciacion(false)}
       />
     </main>
   );
