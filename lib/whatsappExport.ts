@@ -6,8 +6,12 @@
 // después del encabezado, y se van pegando al mensaje anterior hasta
 // encontrar el siguiente encabezado válido.
 
+// El guion entre la hora y el remitente solo aparece en el formato de
+// Android ("fecha, hora - Nombre: mensaje"); iPhone usa corchetes y pasa
+// directo al nombre ("[fecha, hora] Nombre: mensaje", sin guion), así que
+// el guion debe ser opcional.
 const PATRON_LINEA =
-  /^\[?(\d{1,2}\/\d{1,2}\/\d{2,4}),?\s+(\d{1,2}:\d{2}(?::\d{2})?)\s*([ap]\.?\s?m\.?)?\]?\s*[-–]\s*([^:]+):\s(.*)$/i;
+  /^\[?(\d{1,2}\/\d{1,2}\/\d{2,4}),?\s+(\d{1,2}:\d{2}(?::\d{2})?)\s*([ap]\.?\s?m\.?)?\]?\s*(?:[-–]\s*)?([^:]+):\s(.*)$/i;
 
 const PLACEHOLDERS_MULTIMEDIA: { patron: RegExp; tipo: string }[] = [
   { patron: /imagen omitida|image omitted/i, tipo: "image" },
