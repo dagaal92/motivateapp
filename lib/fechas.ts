@@ -11,6 +11,12 @@ export function rangoAnioColombia(anio: number) {
   return { inicio, fin };
 }
 
+/** Convierte una fecha "YYYY-MM-DD" (como la de un <input type="date">) a la
+ * medianoche de ese día en hora de Colombia, expresada en UTC. */
+export function fechaDesdeInputColombia(valor: string): Date {
+  return new Date(`${valor}T05:00:00.000Z`);
+}
+
 /** Rango del "día de hoy" en hora de Colombia, expresado en UTC. */
 export function rangoHoyColombia() {
   const ahoraColombia = new Date(Date.now() - 5 * 60 * 60 * 1000);

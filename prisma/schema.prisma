@@ -50,11 +50,18 @@ model Movimiento {
   monto       Int
   descripcion String?
   categoria   String?
+  // Fecha real de la transacción (puede ser distinta de "creadoEn" cuando se
+  // carga un movimiento histórico). Si es anterior a FECHA_CORTE_SALDO
+  // (lib/balanceCorte.ts), "afectaSaldo" queda en false: el movimiento se
+  // guarda para el registro, pero nunca mueve el saldo de la billetera.
+  fecha       DateTime       @default(now())
+  afectaSaldo Boolean        @default(true)
   creadoEn    DateTime       @default(now())
   pagoDeuda   PagoDeuda?
 
   @@index([cuentaId])
   @@index([categoria])
+  @@index([fecha])
 }
 
 model Deuda {
