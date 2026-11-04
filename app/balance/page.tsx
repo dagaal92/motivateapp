@@ -14,8 +14,6 @@ import {
   Plus,
   ArrowDownCircle,
   ArrowUpCircle,
-  Pencil,
-  X,
 } from "lucide-react";
 import { FECHA_CORTE_SALDO, afectaSaldoPorFecha } from "@/lib/balanceCorte";
 import { fechaDesdeInputColombia } from "@/lib/fechas";
@@ -134,9 +132,6 @@ export default function BalancePage() {
     categoria: "",
     fecha: hoyISO(),
   });
-  const [ajusteCuentaId, setAjusteCuentaId] = useState<string | null>(null);
-  const [valorAjuste, setValorAjuste] = useState("");
-  const [ajustando, setAjustando] = useState(false);
 
   const cargarMovimientos = useCallback(async (sinCategoria: boolean) => {
     const res = await fetch(
@@ -241,40 +236,6 @@ export default function BalancePage() {
   };
 
   const afectaSaldoForm = afectaSaldoPorFecha(fechaDesdeInputColombia(form.fecha));
-
-  const fijarSaldoExacto = async (cuenta: Cuenta) => {
-    const valorReal = Math.round(Number(valorAjuste));
-    if (!valorAjuste || isNaN(valorReal)) return;
-    const diferencia = valorReal - cuenta.saldo;
-    if (diferencia === 0) {
-      setAjusteCuentaId(null);
-      setValorAjuste("");
-      return;
-    }
-    setAjustando(true);
-    try {
-      const res = await fetch("/api/movimientos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          cuentaId: cuenta.id,
-          tipo: diferencia > 0 ? "INGRESO" : "EGRESO",
-          monto: Math.abs(diferencia),
-          categoria: "Ajuste de saldo",
-          descripcion: `Ajuste de saldo: se fijó en ${fmt(valorReal)}`,
-          fecha: hoyISO(),
-        }),
-      });
-      if (!res.ok) throw new Error();
-      setAjusteCuentaId(null);
-      setValorAjuste("");
-      await cargar();
-    } catch {
-      alert("No se pudo ajustar el saldo");
-    } finally {
-      setAjustando(false);
-    }
-  };
 
   const inputCls =
     "w-full bg-white border border-borderLight rounded-md px-3 py-2 text-sm text-ink2 placeholder:text-muted2 focus:outline-none focus:ring-1 focus:ring-accent";
@@ -457,7 +418,6 @@ export default function BalancePage() {
               };
               const Icon = meta.icon;
               const mostrarLogo = meta.logo && !logoFallido[c.nombre];
-              const ajustandoEsta = ajusteCuentaId === c.id;
               return (
                 <div
                   key={c.id}
@@ -490,47 +450,6 @@ export default function BalancePage() {
                       {fmt(c.saldo)}
                     </p>
                   </div>
-
-                  {ajustandoEsta ? (
-                    <div className="w-full flex flex-col gap-1 mt-1">
-                      <input
-                        autoFocus
-                        type="number"
-                        value={valorAjuste}
-                        onChange={(e) => setValorAjuste(e.target.value)}
-                        placeholder="Saldo real"
-                        className="w-full text-xs border border-borderLight rounded-md px-2 py-1 text-center"
-                      />
-                      <div className="flex gap-1">
-                        <button
-                          onClick={() => fijarSaldoExacto(c)}
-                          disabled={ajustando}
-                          className="flex-1 bg-accent text-white text-[11px] font-medium rounded-md py-1 hover:bg-accent/90 transition-colors disabled:opacity-50"
-                        >
-                          {ajustando ? "…" : "Fijar"}
-                        </button>
-                        <button
-                          onClick={() => {
-                            setAjusteCuentaId(null);
-                            setValorAjuste("");
-                          }}
-                          className="text-muted2 hover:text-ink2 px-1"
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        setAjusteCuentaId(c.id);
-                        setValorAjuste(String(c.saldo));
-                      }}
-                      className="flex items-center gap-1 text-[10px] text-muted2 hover:text-accent transition-colors"
-                    >
-                      <Pencil size={10} /> Fijar saldo exacto
-                    </button>
-                  )}
                 </div>
               );
             })}
