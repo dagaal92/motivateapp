@@ -15,6 +15,8 @@ import {
   ArrowDownCircle,
   ArrowUpCircle,
 } from "lucide-react";
+import { FECHA_CORTE_SALDO, afectaSaldoPorFecha } from "@/lib/balanceCorte";
+import { fechaDesdeInputColombia } from "@/lib/fechas";
 
 type Cuenta = {
   id: string;
@@ -28,9 +30,12 @@ type Movimiento = {
   monto: number;
   descripcion: string | null;
   categoria: string | null;
-  creadoEn: string;
+  fecha: string;
+  afectaSaldo: boolean;
   cuenta: { nombre: string };
 };
+
+const hoyISO = () => new Date().toISOString().slice(0, 10);
 
 type Opcion = { id: string; categoria: string; valor: string };
 
@@ -125,6 +130,7 @@ export default function BalancePage() {
     monto: "",
     descripcion: "",
     categoria: "",
+    fecha: hoyISO(),
   });
 
   const cargarMovimientos = useCallback(async (sinCategoria: boolean) => {
@@ -212,7 +218,14 @@ export default function BalancePage() {
         body: JSON.stringify(form),
       });
       if (!res.ok) throw new Error();
-      setForm({ cuentaId: "", tipo: "INGRESO", monto: "", descripcion: "", categoria: "" });
+      setForm({
+        cuentaId: "",
+        tipo: "INGRESO",
+        monto: "",
+        descripcion: "",
+        categoria: "",
+        fecha: hoyISO(),
+      });
       setFormAbierto(false);
       await cargar();
     } catch {
@@ -221,6 +234,8 @@ export default function BalancePage() {
       setEnviando(false);
     }
   };
+
+  const afectaSaldoForm = afectaSaldoPorFecha(fechaDesdeInputColombia(form.fecha));
 
   const inputCls =
     "w-full bg-white border border-borderLight rounded-md px-3 py-2 text-sm text-ink2 placeholder:text-muted2 focus:outline-none focus:ring-1 focus:ring-accent";
@@ -350,7 +365,28 @@ export default function BalancePage() {
                 placeholder="Motivo del movimiento"
               />
             </div>
+            <div>
+              <label className={labelCls}>Fecha</label>
+              <input
+                type="date"
+                value={form.fecha}
+                onChange={(e) => setForm((f) => ({ ...f, fecha: e.target.value }))}
+                className={inputCls}
+              />
+            </div>
             <div className="md:col-span-5">
+              {!afectaSaldoForm && (
+                <p className="text-xs text-amber2 bg-amberSoft rounded-md px-3 py-2 mb-3">
+                  Esta fecha es anterior al{" "}
+                  {FECHA_CORTE_SALDO.toLocaleDateString("es-CO", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                  })}
+                  : el movimiento queda guardado como registro histórico, pero{" "}
+                  <strong>no va a afectar el saldo actual</strong> de la billetera.
+                </p>
+              )}
               <button
                 type="submit"
                 disabled={enviando}
@@ -456,7 +492,17 @@ export default function BalancePage() {
                 <tbody>
                   {movimientosPaginados.map((m) => (
                     <tr key={m.id} className="border-t border-borderLight">
-                      <td className="px-5 py-3 text-muted2">{fmtFechaHora(m.creadoEn)}</td>
+                      <td className="px-5 py-3 text-muted2">
+                        {fmtFechaHora(m.fecha)}
+                        {!m.afectaSaldo && (
+                          <span
+                            className="ml-2 text-[10px] font-medium text-muted2 bg-paper border border-borderLight rounded-full px-2 py-0.5"
+                            title="Registro histórico: no afectó el saldo de la billetera"
+                          >
+                            Histórico
+                          </span>
+                        )}
+                      </td>
                       <td className="px-5 py-3 text-ink2">{m.cuenta.nombre}</td>
                       <td className="px-5 py-3">
                         <span
