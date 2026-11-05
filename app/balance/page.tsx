@@ -94,6 +94,7 @@ const ICONO_CUENTA: Record<
 };
 
 const PAGE_SIZE = 25;
+const CUENTAS_INVERSION = ["Lulo", "Trii"];
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("es-CO", {
@@ -240,6 +241,47 @@ export default function BalancePage() {
   const inputCls =
     "w-full bg-white border border-borderLight rounded-md px-3 py-2 text-sm text-ink2 placeholder:text-muted2 focus:outline-none focus:ring-1 focus:ring-accent";
   const labelCls = "text-xs font-medium text-muted2 mb-1 block";
+
+  const renderTarjetaCuenta = (c: Cuenta) => {
+    const meta = ICONO_CUENTA[c.nombre] || {
+      icon: Wallet,
+      bg: "bg-accentSoft",
+      fg: "text-accent",
+      logo: "",
+    };
+    const Icon = meta.icon;
+    const mostrarLogo = meta.logo && !logoFallido[c.nombre];
+    return (
+      <div
+        key={c.id}
+        className="bg-card border border-borderLight rounded-xl p-3 flex flex-col items-center text-center gap-1.5"
+      >
+        <div
+          className={`w-8 h-8 rounded-lg ${
+            mostrarLogo ? "bg-paper" : `${meta.bg} ${meta.fg}`
+          } flex items-center justify-center shrink-0 overflow-hidden`}
+        >
+          {mostrarLogo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={meta.logo}
+              alt={c.nombre}
+              className="w-full h-full object-contain p-1"
+              onError={() => setLogoFallido((prev) => ({ ...prev, [c.nombre]: true }))}
+            />
+          ) : (
+            <Icon size={16} />
+          )}
+        </div>
+        <div className="min-w-0 w-full">
+          <p className="text-[11px] font-medium text-ink2 truncate leading-tight">
+            {c.nombre}
+          </p>
+          <p className="text-xs font-semibold text-ink2 leading-tight">{fmt(c.saldo)}</p>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <main className="p-4 sm:p-6 max-w-[1400px] mx-auto space-y-5">
@@ -409,51 +451,26 @@ export default function BalancePage() {
         <>
           {/* Bolsillos */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
-            {cuentas.map((c) => {
-              const meta = ICONO_CUENTA[c.nombre] || {
-                icon: Wallet,
-                bg: "bg-accentSoft",
-                fg: "text-accent",
-                logo: "",
-              };
-              const Icon = meta.icon;
-              const mostrarLogo = meta.logo && !logoFallido[c.nombre];
-              return (
-                <div
-                  key={c.id}
-                  className="bg-card border border-borderLight rounded-xl p-3 flex flex-col items-center text-center gap-1.5"
-                >
-                  <div
-                    className={`w-8 h-8 rounded-lg ${
-                      mostrarLogo ? "bg-paper" : `${meta.bg} ${meta.fg}`
-                    } flex items-center justify-center shrink-0 overflow-hidden`}
-                  >
-                    {mostrarLogo ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={meta.logo}
-                        alt={c.nombre}
-                        className="w-full h-full object-contain p-1"
-                        onError={() =>
-                          setLogoFallido((prev) => ({ ...prev, [c.nombre]: true }))
-                        }
-                      />
-                    ) : (
-                      <Icon size={16} />
-                    )}
-                  </div>
-                  <div className="min-w-0 w-full">
-                    <p className="text-[11px] font-medium text-ink2 truncate leading-tight">
-                      {c.nombre}
-                    </p>
-                    <p className="text-xs font-semibold text-ink2 leading-tight">
-                      {fmt(c.saldo)}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
+            {cuentas
+              .filter((c) => !CUENTAS_INVERSION.includes(c.nombre))
+              .map((c) => renderTarjetaCuenta(c))}
           </div>
+
+          {cuentas.some((c) => CUENTAS_INVERSION.includes(c.nombre)) && (
+            <>
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted2">
+                  Cuentas de inversión
+                </span>
+                <div className="flex-1 h-px bg-borderLight" />
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
+                {cuentas
+                  .filter((c) => CUENTAS_INVERSION.includes(c.nombre))
+                  .map((c) => renderTarjetaCuenta(c))}
+              </div>
+            </>
+          )}
 
           {/* Movimientos recientes */}
           <div className="bg-card border border-borderLight rounded-xl overflow-hidden">
