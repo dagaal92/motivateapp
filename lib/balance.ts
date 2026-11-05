@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { CUENTAS_BASE } from "@/lib/cuentas";
+import { afectaSaldoPorFecha } from "@/lib/balanceCorte";
 
 type EstadoIngreso = {
   estado: string;
@@ -7,6 +8,7 @@ type EstadoIngreso = {
   valorTotal: number;
   numeroOrden: string | null;
   telefono: string;
+  creadoEn: Date;
 };
 
 type Efecto = { cuentaNombre: string; monto: number };
@@ -16,6 +18,10 @@ function calcularEfecto(pedido: EstadoIngreso | null): Efecto | null {
   if (pedido.estado !== "ENTREGADO") return null;
   if (!pedido.ingresoDinero || !CUENTAS_BASE.includes(pedido.ingresoDinero as any)) return null;
   if (pedido.valorTotal <= 0) return null;
+  // Un pedido anterior al corte de noviembre (lib/balanceCorte.ts) ya quedó
+  // reconciliado a mano al poner en orden las billeteras: marcarlo Entregado
+  // ahora (o archivarlo) no debe volver a sumar esa plata al saldo actual.
+  if (!afectaSaldoPorFecha(pedido.creadoEn)) return null;
   return { cuentaNombre: pedido.ingresoDinero, monto: pedido.valorTotal };
 }
 
