@@ -9,6 +9,7 @@ import { normalizarNombre, normalizarTelefono } from "@/lib/normalizar";
 import { ErrorValidacion } from "@/lib/errores";
 import { capturarError } from "@/lib/sentry";
 import { esFinanciacionDiferida } from "@/lib/financiacion";
+import { afectaSaldoPorFecha } from "@/lib/balanceCorte";
 
 export async function GET(
   _req: NextRequest,
@@ -129,13 +130,20 @@ export async function PATCH(
         totalFleteNuevo !== totalFleteAnterior ||
         cuentaFleteIdNueva !== existente.cuentaFleteId;
 
+      // Mismo corte que ajustarIngresoPedido: un pedido anterior al corte de
+      // noviembre ya quedó reconciliado a mano, así que el flete tampoco debe
+      // volver a tocar el saldo de la billetera, aunque cambie de valor o de
+      // cuenta.
+      const creadoEnVigente = data.creadoEn ? new Date(data.creadoEn as any) : existente.creadoEn;
+      const pedidoAfectaSaldo = afectaSaldoPorFecha(creadoEnVigente);
+
       if (huboCambioFlete) {
         if (totalFleteNuevo > 0 && !cuentaFleteIdNueva) {
           throw new ErrorValidacion("Selecciona de qué billetera sale el flete");
         }
 
         // Revierte el efecto anterior sobre la billetera
-        if (existente.cuentaFleteId && totalFleteAnterior > 0) {
+        if (pedidoAfectaSaldo && existente.cuentaFleteId && totalFleteAnterior > 0) {
           const cuentaAnterior = await tx.cuenta.findUnique({
             where: { id: existente.cuentaFleteId },
           });
@@ -157,7 +165,7 @@ export async function PATCH(
         }
 
         // Aplica el nuevo efecto
-        if (cuentaFleteIdNueva && totalFleteNuevo > 0) {
+        if (pedidoAfectaSaldo && cuentaFleteIdNueva && totalFleteNuevo > 0) {
           const cuentaNueva = await tx.cuenta.findUnique({
             where: { id: cuentaFleteIdNueva },
           });
@@ -220,7 +228,7 @@ export async function DELETE(
       if (!pedido) throw new ErrorValidacion("Pedido no encontrado");
 
       const totalFlete = pedido.fletes.reduce((s, f) => s + f.valor, 0);
-      if (pedido.cuentaFleteId && totalFlete > 0) {
+      if (afectaSaldoPorFecha(pedido.creadoEn) && pedido.cuentaFleteId && totalFlete > 0) {
         const cuenta = await tx.cuenta.findUnique({ where: { id: pedido.cuentaFleteId } });
         if (cuenta) {
           await tx.cuenta.update({
