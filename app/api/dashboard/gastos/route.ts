@@ -7,6 +7,12 @@ export const dynamic = "force-dynamic";
 
 const SIN_CATEGORIZAR = "Sin categorizar";
 
+// Categorías que no son un gasto real: "Transferencia entre cuentas" es
+// plata moviéndose entre tus propias billeteras, y "Ajuste de saldo" es una
+// corrección contable (cuadrar el saldo calculado con el real), no algo que
+// de verdad se gastó.
+const CATEGORIAS_EXCLUIDAS = ["Transferencia entre cuentas", "Ajuste de saldo"];
+
 export async function GET(req: NextRequest) {
   try {
     const anio = Number(req.nextUrl.searchParams.get("anio"));
@@ -21,8 +27,7 @@ export async function GET(req: NextRequest) {
     const movimientos = await prisma.movimiento.findMany({
       where: {
         tipo: "EGRESO",
-        // No es un gasto real: solo mueve plata entre tus propias billeteras.
-        categoria: { not: "Transferencia entre cuentas" },
+        categoria: { notIn: CATEGORIAS_EXCLUIDAS },
         fecha: { gte: inicio, lt: fin },
       },
       select: { categoria: true, monto: true },
