@@ -4,6 +4,7 @@ export const CUENTAS_BASE = [
   "Daviplata",
   "Mercado Pago",
   "Dropi",
+  "DropiPay",
   "Envia",
   "Lulo",
   "Trii",
