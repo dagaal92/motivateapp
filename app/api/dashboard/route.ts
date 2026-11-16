@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { rangoMesColombia, rangoAnioColombia } from "@/lib/fechas";
 import { capturarError } from "@/lib/sentry";
-import { INGRESOS_FINANCIACION_DIFERIDA } from "@/lib/financiacion";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +18,7 @@ export async function GET(req: NextRequest) {
 
     const { inicio, fin } = mes ? rangoMesColombia(anio, mes) : rangoAnioColombia(anio);
 
-    const [pedidos, devolucionesPendientes, porCobrarFinanciacion] = await Promise.all([
+    const [pedidos, devolucionesPendientes] = await Promise.all([
       prisma.pedido.findMany({
         where: { creadoEn: { gte: inicio, lt: fin } },
         select: {
@@ -28,18 +27,12 @@ export async function GET(req: NextRequest) {
           fletes: { select: { valor: true } },
         },
       }),
-      // No se filtra por el rango de fechas a propósito: son listas de
+      // No se filtra por el rango de fechas a propósito: es una lista de
       // seguimiento en vivo, sin importar de cuándo sea el pedido original.
+      // (Lo que falta por cobrar de Addi/Sistecrédito ahora vive en
+      // /api/dashboard/dinero-por-entrar, junto con los demás canales.)
       prisma.pedido.count({
         where: { estado: "DEVUELTO", devolucionRecibidaEn: null },
-      }),
-      prisma.pedido.aggregate({
-        where: {
-          ingresoDinero: { in: [...INGRESOS_FINANCIACION_DIFERIDA] },
-          general: { not: "Archivado" },
-        },
-        _sum: { valorTotal: true },
-        _count: true,
       }),
     ]);
 
@@ -71,8 +64,6 @@ export async function GET(req: NextRequest) {
       totalFletes,
       totalDevoluciones,
       devolucionesPendientes,
-      totalPorCobrarFinanciacion: porCobrarFinanciacion._sum.valorTotal || 0,
-      cantidadPorCobrarFinanciacion: porCobrarFinanciacion._count,
     });
   } catch (error) {
     await capturarError(error);

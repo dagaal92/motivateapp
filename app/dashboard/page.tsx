@@ -13,15 +13,24 @@ import {
   Truck,
   RotateCcw,
   AlertTriangle,
-  Landmark,
   Receipt,
   ListChecks,
   TrendingDown,
+  HandCoins,
+  Banknote,
+  CreditCard,
+  Wallet,
+  PiggyBank,
 } from "lucide-react";
 import PedidosPorMesChart from "@/components/PedidosPorMesChart";
 import DevolucionesPendientesModal from "@/components/DevolucionesPendientesModal";
-import PorCobrarFinanciacionModal from "@/components/PorCobrarFinanciacionModal";
 import GastosCategoriaModal from "@/components/GastosCategoriaModal";
+import DineroPorEntrarModal from "@/components/DineroPorEntrarModal";
+import {
+  CANAL_INFO,
+  type CanalPorEntrar,
+  type DineroPorEntrarDatos,
+} from "@/lib/dineroPorEntrar";
 
 type Datos = {
   anio: number;
@@ -34,8 +43,6 @@ type Datos = {
   totalFletes: number;
   totalDevoluciones: number;
   devolucionesPendientes: number;
-  totalPorCobrarFinanciacion: number;
-  cantidadPorCobrarFinanciacion: number;
 };
 
 type GastoCategoria = { categoria: string; total: number; cantidad: number };
@@ -62,6 +69,24 @@ const fmt = (n: number) =>
 
 const fmtNum = (n: number) => n.toLocaleString("es-CO");
 
+const fmtFechaCorta = (iso: string) =>
+  new Date(iso).toLocaleDateString("es-CO", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "America/Bogota",
+  });
+
+const ESTILO_CANAL: Record<
+  CanalPorEntrar,
+  { icon: typeof HandCoins; bg: string; fg: string; hover: string }
+> = {
+  CONTRAENTREGA: { icon: Banknote, bg: "bg-tealSoft", fg: "text-teal", hover: "hover:border-teal" },
+  SISTECREDITO: { icon: Wallet, bg: "bg-accentSoft", fg: "text-accent", hover: "hover:border-accent" },
+  ADDI: { icon: CreditCard, bg: "bg-purpleSoft", fg: "text-purple", hover: "hover:border-purple" },
+  SUMAS: { icon: PiggyBank, bg: "bg-orangeSoft", fg: "text-orange", hover: "hover:border-orange" },
+};
+
 export default function DashboardPage() {
   const hoy = new Date();
   const [anio, setAnio] = useState(hoy.getFullYear());
@@ -72,7 +97,9 @@ export default function DashboardPage() {
   const [serie, setSerie] = useState<PuntoMes[] | null>(null);
   const [serieError, setSerieError] = useState<string | null>(null);
   const [mostrarDevolucionesPendientes, setMostrarDevolucionesPendientes] = useState(false);
-  const [mostrarPorCobrarFinanciacion, setMostrarPorCobrarFinanciacion] = useState(false);
+  const [porEntrar, setPorEntrar] = useState<DineroPorEntrarDatos | null>(null);
+  const [porEntrarError, setPorEntrarError] = useState<string | null>(null);
+  const [canalPorEntrar, setCanalPorEntrar] = useState<CanalPorEntrar | "TOTAL" | null>(null);
   const [gastos, setGastos] = useState<GastosDatos | null>(null);
   const [gastosError, setGastosError] = useState<string | null>(null);
   const [categoriaGastoSeleccionada, setCategoriaGastoSeleccionada] = useState<string | null>(
@@ -131,6 +158,20 @@ export default function DashboardPage() {
   useEffect(() => {
     cargarSerie();
   }, [cargarSerie]);
+
+  // "Dinero por entrar" no depende del periodo elegido: se carga una sola vez.
+  useEffect(() => {
+    fetch("/api/dashboard/dinero-por-entrar")
+      .then((res) => {
+        if (!res.ok) throw new Error();
+        return res.json();
+      })
+      .then((data: DineroPorEntrarDatos) => {
+        setPorEntrar(data);
+        setPorEntrarError(null);
+      })
+      .catch(() => setPorEntrarError("No se pudo calcular el dinero por entrar."));
+  }, []);
 
   const cambiarMes = (delta: number) => {
     if (mes === null) return;
@@ -215,20 +256,6 @@ export default function DashboardPage() {
           bg: "bg-amberSoft",
           fg: "text-amber2",
           onClick: () => setMostrarDevolucionesPendientes(true),
-        },
-      ]
-    : [];
-
-  const tarjetasFinanciacion = datos
-    ? [
-        {
-          label: "Por cobrar (financiación)",
-          valor: fmt(datos.totalPorCobrarFinanciacion),
-          sub: `${fmtNum(datos.cantidadPorCobrarFinanciacion)} pedido(s) con Addi/Sistecrédito — clic para ver el detalle`,
-          icon: Landmark,
-          bg: "bg-purpleSoft",
-          fg: "text-purple",
-          onClick: () => setMostrarPorCobrarFinanciacion(true),
         },
       ]
     : [];
@@ -424,48 +451,98 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
+          </>
+        )
+      )}
 
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted2">
-                Financiación diferida
-              </span>
-              <div className="flex-1 h-px bg-borderLight" />
+      {porEntrarError && (
+        <div className="bg-redSoft text-red text-sm p-4 rounded-md">{porEntrarError}</div>
+      )}
+
+      {porEntrar && (
+        <>
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted2">
+              Dinero por entrar
+            </span>
+            <div className="flex-1 h-px bg-borderLight" />
+          </div>
+
+          {porEntrar.avisoShopify && (
+            <div className="bg-amberSoft text-amber2 text-xs p-3 rounded-md">
+              {porEntrar.avisoShopify}
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+            <div
+              onClick={() => setCanalPorEntrar("TOTAL")}
+              role="button"
+              tabIndex={0}
+              className="col-span-2 lg:col-span-1 bg-card border border-borderLight rounded-xl p-3 sm:p-5 cursor-pointer hover:border-green transition-colors"
+            >
+              <div className="flex flex-col sm:flex-row items-start gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-greenSoft text-green flex items-center justify-center shrink-0">
+                  <HandCoins size={18} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] sm:text-xs font-medium text-muted2 leading-tight">
+                    Total por entrar
+                  </p>
+                  <p className="text-lg sm:text-2xl font-semibold text-ink2 mt-0.5 truncate">
+                    {fmt(porEntrar.total.bruto)}
+                  </p>
+                  <p className="text-[10px] sm:text-[11px] text-muted2 mt-0.5 leading-tight">
+                    {fmtNum(porEntrar.total.cantidad)} pedido(s) · Neto estimado{" "}
+                    <span className="font-semibold text-ink2">{fmt(porEntrar.total.neto)}</span>
+                  </p>
+                </div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              {tarjetasFinanciacion.map((t) => (
+            {porEntrar.canales.map((c) => {
+              const estilo = ESTILO_CANAL[c.canal];
+              return (
                 <div
-                  key={t.label}
-                  onClick={t.onClick}
+                  key={c.canal}
+                  onClick={() => setCanalPorEntrar(c.canal)}
                   role="button"
                   tabIndex={0}
-                  className="bg-card border border-borderLight rounded-xl p-3 sm:p-5 cursor-pointer hover:border-purple transition-colors"
+                  className={`bg-card border border-borderLight rounded-xl p-3 sm:p-5 cursor-pointer transition-colors ${estilo.hover}`}
                 >
                   <div className="flex flex-col sm:flex-row items-start gap-2 sm:gap-3">
                     <div
-                      className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg ${t.bg} ${t.fg} flex items-center justify-center shrink-0`}
+                      className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg ${estilo.bg} ${estilo.fg} flex items-center justify-center shrink-0`}
                     >
-                      <t.icon size={18} />
+                      <estilo.icon size={18} />
                     </div>
                     <div className="min-w-0">
                       <p className="text-[11px] sm:text-xs font-medium text-muted2 leading-tight">
-                        {t.label}
+                        {CANAL_INFO[c.canal].label}
                       </p>
                       <p className="text-lg sm:text-2xl font-semibold text-ink2 mt-0.5 truncate">
-                        {t.valor}
+                        {fmt(c.bruto)}
                       </p>
-                      {t.sub && (
-                        <p className="text-[10px] sm:text-[11px] text-muted2 mt-0.5 leading-tight">
-                          {t.sub}
-                        </p>
-                      )}
+                      <p className="text-[10px] sm:text-[11px] text-muted2 mt-0.5 leading-tight">
+                        {fmtNum(c.cantidad)} pedido(s) · Neto estimado {fmt(c.neto)}
+                      </p>
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          </>
-        )
+              );
+            })}
+          </div>
+
+          <p className="text-[11px] text-muted2 -mt-2">
+            En vivo, sin importar el periodo elegido. Valor = suma del valor de los pedidos;
+            el neto es un estimado después de comisiones. Clic en una tarjeta para ver los
+            pedidos.
+            {porEntrar.historicoSinConciliar > 0 &&
+              ` No incluye ${fmtNum(porEntrar.historicoSinConciliar)} pedido(s) anteriores al ${fmtFechaCorta(
+                porEntrar.fechaCorte
+              )} con guía y sin "Ingreso Dinero" ni marca de despachado (histórico por conciliar).`}
+          </p>
+        </>
       )}
 
       {gastosError && (
@@ -569,9 +646,10 @@ export default function DashboardPage() {
         abierto={mostrarDevolucionesPendientes}
         onClose={() => setMostrarDevolucionesPendientes(false)}
       />
-      <PorCobrarFinanciacionModal
-        abierto={mostrarPorCobrarFinanciacion}
-        onClose={() => setMostrarPorCobrarFinanciacion(false)}
+      <DineroPorEntrarModal
+        canal={canalPorEntrar}
+        datos={porEntrar}
+        onClose={() => setCanalPorEntrar(null)}
       />
       <GastosCategoriaModal
         categoria={categoriaGastoSeleccionada}
