@@ -26,16 +26,28 @@ export const CANALES_POR_ENTRAR: CanalPorEntrar[] = [
 // - Addi crédito: 6,5% + IVA (19% sobre la comisión) → llega ≈ 92,265%.
 //   (Addi débito/PSE cobra 2,5% + IVA y paga al día siguiente, pero Shopify
 //   no distingue una de otra, así que se asume crédito.)
-// - Sistecrédito: llega a Bancolombia ≈ 3,95% menos.
+// - Addi Shop (venta que llega desde el marketplace de Addi): además cobra
+//   9% de CPA + IVA → 15,5% + IVA en total (ej. #6732: 160.900 → 131.222).
+// - Sistecrédito: 2% ("Valor neto a pagar" de Credinet = 98% de la factura).
 // - Sumas (Intercrédito): pagó el valor completo en el único caso visto.
 // - Contraentrega: no hay comisión de pasarela; Dropi/Montes descuentan el
 //   flete al recaudar, así que se restan los fletes que ya estén registrados.
 export const COMISION_CANAL: Record<CanalPorEntrar, number> = {
   CONTRAENTREGA: 0,
-  SISTECREDITO: 0.0395,
+  SISTECREDITO: 0.02,
   ADDI: 0.065 * 1.19,
   SUMAS: 0,
 };
+
+export const COMISION_ADDI_SHOP = (0.065 + 0.09) * 1.19;
+
+// Las visitas que llegan desde el marketplace de Addi (Addi Shop) traen
+// como referente una página de addi.com (ej. https://campaigns.addi.com/).
+const RE_REFERENTE_ADDI_SHOP = /^https?:\/\/([a-z0-9-]+\.)*addi\.com(\/|$)/i;
+
+export function esReferenteAddiShop(url: string | null | undefined): boolean {
+  return Boolean(url && RE_REFERENTE_ADDI_SHOP.test(url.trim()));
+}
 
 export const CANAL_INFO: Record<CanalPorEntrar, { label: string; detalle: string }> = {
   CONTRAENTREGA: {
@@ -46,12 +58,12 @@ export const CANAL_INFO: Record<CanalPorEntrar, { label: string; detalle: string
   SISTECREDITO: {
     label: "Sistecrédito",
     detalle:
-      "Pedidos financiados con Sistecrédito. Neto estimado: valor menos ≈ 3,95% (lo que se ha visto llegar a Bancolombia).",
+      "Pedidos financiados con Sistecrédito. Neto estimado: 98% del valor (comisión 2%, como el \"Valor neto a pagar\" de Credinet). Paga muy tarde: ~75–90 días después de la venta, sin fecha fija.",
   },
   ADDI: {
     label: "Addi",
     detalle:
-      "Pedidos pagados con Addi. Se asume crédito: paga 30 días después de la venta, con 6,5% + IVA de comisión (llega ≈ 92,3%). Si fue débito/PSE paga al día siguiente con 2,5% + IVA.",
+      "Pedidos pagados con Addi. Se asume crédito: paga 30 días después de la venta, con 6,5% + IVA de comisión (llega ≈ 92,3%); si fue débito/PSE paga al día siguiente con 2,5% + IVA. Los marcados \"Addi Shop\" (la visita llegó desde addi.com) pagan además 9% de CPA + IVA (llega ≈ 81,6%).",
   },
   SUMAS: {
     label: "Sumas",
@@ -87,8 +99,14 @@ export function marcadoDespachado(p: { envio: string | null; estado: string }): 
   return p.envio === "Despachado" || p.estado === "EN_CAMINO" || p.estado === "ENTREGADO";
 }
 
-export function netoEstimado(canal: CanalPorEntrar, valor: number, fletes: number): number {
-  const neto = Math.round(valor * (1 - COMISION_CANAL[canal]));
+export function netoEstimado(
+  canal: CanalPorEntrar,
+  valor: number,
+  fletes: number,
+  addiShop = false
+): number {
+  const comision = canal === "ADDI" && addiShop ? COMISION_ADDI_SHOP : COMISION_CANAL[canal];
+  const neto = Math.round(valor * (1 - comision));
   return canal === "CONTRAENTREGA" ? Math.max(0, neto - fletes) : neto;
 }
 
@@ -160,8 +178,9 @@ export type Clasificacion =
 /**
  * Decide si un pedido abierto tiene plata por entrar y por qué canal.
  *
- * - Si "Ingreso Dinero" es Addi/Sistecredito/Sumas, ese es el canal (sin
- *   importar fecha ni despacho).
+ * - Si "Ingreso Dinero" es Addi/Sistecredito/Sumas, ese es el canal sin
+ *   importar la fecha (ni el corte de noviembre) ni si figura despachado:
+ *   basta con que el pedido siga abierto.
  * - Si "Ingreso Dinero" es otra billetera, la plata ya entró: no cuenta.
  * - Si está vacío, el canal sale de la pasarela de Shopify (o, en pedidos
  *   manuales, se asume contraentrega). Contraentrega solo cuenta si ya se
@@ -241,6 +260,7 @@ export type PedidoPorEntrar = {
   canal: CanalPorEntrar;
   sinIngresoDinero: boolean;
   pasarela: string | null;
+  addiShop: boolean;
 };
 
 export type ResumenCanal = {

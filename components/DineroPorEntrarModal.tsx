@@ -158,6 +158,14 @@ export default function DineroPorEntrarModal({
                               Sin Ingreso Dinero
                             </span>
                           )}
+                          {p.addiShop && (
+                            <span
+                              className="ml-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-purpleSoft text-purple"
+                              title="La visita llegó desde addi.com (Addi Shop): se descuenta además 9% de CPA + IVA"
+                            >
+                              Addi Shop
+                            </span>
+                          )}
                         </td>
                         <td className="px-4 py-2.5 text-ink2">{p.cliente || p.telefono}</td>
                         {esTotal && (

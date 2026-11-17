@@ -6,7 +6,9 @@ import {
   CANALES_POR_ENTRAR,
   ESTADOS_EXCLUIDOS,
   GENERALES_CERRADOS,
+  INGRESO_DINERO_CANAL,
   clasificarPedido,
+  esReferenteAddiShop,
   fechaPagoEsperado,
   ingresoSinRegistrar,
   marcadoDespachado,
@@ -38,65 +40,108 @@ const CONSULTA_PAGOS = `
   }
 `;
 
-type NodoOrden = {
+// Va en una consulta aparte (y en paralelo) para que, si algún día falla,
+// solo se pierda la detección de Addi Shop y no la clasificación por canal.
+const CONSULTA_REFERENTES = `
+  query ReferentesPedidos($ids: [ID!]!) {
+    nodes(ids: $ids) {
+      ... on Order {
+        legacyResourceId
+        customerJourneySummary {
+          firstVisit { referrerUrl }
+          lastVisit { referrerUrl }
+        }
+      }
+    }
+  }
+`;
+
+type NodoPago = {
   legacyResourceId: string;
   paymentGatewayNames: string[];
   displayFinancialStatus: string | null;
   displayFulfillmentStatus: string | null;
   cancelledAt: string | null;
   transactions: { gateway: string | null; kind: string; status: string }[];
-} | null;
+};
 
-/** Trae de Shopify la pasarela de pago de cada pedido (solo lectura).
- * Devuelve null si no se pudo consultar. */
-async function traerPagosShopify(ids: string[]): Promise<Map<string, PagoShopify> | null> {
+type NodoReferente = {
+  legacyResourceId: string;
+  customerJourneySummary: {
+    firstVisit: { referrerUrl: string | null } | null;
+    lastVisit: { referrerUrl: string | null } | null;
+  } | null;
+};
+
+/** Consulta pedidos de Shopify por id (solo lectura), en lotes. Devuelve
+ * null si no se pudo consultar. */
+async function consultarPedidosShopify<N extends { legacyResourceId: string }, T>(
+  consulta: string,
+  ids: string[],
+  convertir: (nodo: N) => T
+): Promise<Map<string, T> | null> {
   const domain = process.env.SHOPIFY_STORE_DOMAIN;
   const token = process.env.SHOPIFY_ADMIN_API_TOKEN;
   if (!domain || !token) return null;
 
-  const pagos = new Map<string, PagoShopify>();
-  if (ids.length === 0) return pagos;
+  const resultado = new Map<string, T>();
+  if (ids.length === 0) return resultado;
 
   const control = new AbortController();
   const temporizador = setTimeout(() => control.abort(), TIMEOUT_SHOPIFY_MS);
   try {
-    const lotes: string[][] = [];
     for (let i = 0; i < ids.length; i += TAMANO_LOTE_SHOPIFY) {
-      lotes.push(ids.slice(i, i + TAMANO_LOTE_SHOPIFY));
-    }
-    for (const lote of lotes) {
+      const lote = ids.slice(i, i + TAMANO_LOTE_SHOPIFY);
       const res = await fetch(`https://${domain}/admin/api/2024-10/graphql.json`, {
         method: "POST",
         headers: { "X-Shopify-Access-Token": token, "Content-Type": "application/json" },
         body: JSON.stringify({
-          query: CONSULTA_PAGOS,
+          query: consulta,
           variables: { ids: lote.map((id) => `gid://shopify/Order/${id}`) },
         }),
         cache: "no-store",
         signal: control.signal,
       });
       if (!res.ok) throw new Error(`Shopify respondió ${res.status}`);
-      const json = (await res.json()) as { data?: { nodes: NodoOrden[] }; errors?: unknown };
+      const json = (await res.json()) as { data?: { nodes: (N | null)[] }; errors?: unknown };
       if (!json.data || json.errors) throw new Error("Shopify devolvió errores en la consulta");
       for (const nodo of json.data.nodes) {
         if (!nodo || !nodo.legacyResourceId) continue;
-        const fulfillment = nodo.displayFulfillmentStatus;
-        pagos.set(String(nodo.legacyResourceId), {
-          pasarelas: nodo.paymentGatewayNames || [],
-          estadoFinanciero: nodo.displayFinancialStatus,
-          preparado: fulfillment === "FULFILLED" || fulfillment === "PARTIALLY_FULFILLED",
-          cancelado: Boolean(nodo.cancelledAt),
-          transacciones: nodo.transactions || [],
-        });
+        resultado.set(String(nodo.legacyResourceId), convertir(nodo));
       }
     }
-    return pagos;
+    return resultado;
   } catch (error) {
     await capturarError(error);
     return null;
   } finally {
     clearTimeout(temporizador);
   }
+}
+
+/** Pasarela de pago de cada pedido. */
+function traerPagosShopify(ids: string[]) {
+  return consultarPedidosShopify<NodoPago, PagoShopify>(CONSULTA_PAGOS, ids, (nodo) => {
+    const fulfillment = nodo.displayFulfillmentStatus;
+    return {
+      pasarelas: nodo.paymentGatewayNames || [],
+      estadoFinanciero: nodo.displayFinancialStatus,
+      preparado: fulfillment === "FULFILLED" || fulfillment === "PARTIALLY_FULFILLED",
+      cancelado: Boolean(nodo.cancelledAt),
+      transacciones: nodo.transactions || [],
+    };
+  });
+}
+
+/** true si la visita que terminó en el pedido llegó desde addi.com (Addi Shop). */
+function traerAddiShop(ids: string[]) {
+  return consultarPedidosShopify<NodoReferente, boolean>(CONSULTA_REFERENTES, ids, (nodo) => {
+    const viaje = nodo.customerJourneySummary;
+    return (
+      esReferenteAddiShop(viaje?.firstVisit?.referrerUrl) ||
+      esReferenteAddiShop(viaje?.lastVisit?.referrerUrl)
+    );
+  });
 }
 
 export async function GET() {
@@ -140,7 +185,19 @@ export async function GET() {
           (p.creadoEn.getTime() >= corte.getTime() || marcadoDespachado(p))
       )
       .map((p) => p.shopifyOrderId as string);
-    const pagos = await traerPagosShopify(idsShopify);
+    // Para Addi Shop hay que mirar también los que ya dicen "Addi".
+    const idsReferentes = Array.from(
+      new Set([
+        ...idsShopify,
+        ...pedidos
+          .filter((p) => p.shopifyOrderId && p.ingresoDinero && INGRESO_DINERO_CANAL[p.ingresoDinero] === "ADDI")
+          .map((p) => p.shopifyOrderId as string),
+      ])
+    );
+    const [pagos, addiShop] = await Promise.all([
+      traerPagosShopify(idsShopify),
+      traerAddiShop(idsReferentes),
+    ]);
 
     const resumen = new Map(
       CANALES_POR_ENTRAR.map((canal) => [
@@ -160,8 +217,10 @@ export async function GET() {
       if (clasificacion.tipo !== "CANAL") continue;
 
       const { canal } = clasificacion;
+      const esAddiShop =
+        canal === "ADDI" && Boolean(p.shopifyOrderId && addiShop?.get(p.shopifyOrderId));
       const fletes = p.fletes.reduce((s, f) => s + f.valor, 0);
-      const neto = netoEstimado(canal, p.valorTotal, fletes);
+      const neto = netoEstimado(canal, p.valorTotal, fletes, esAddiShop);
       const pagoEsperado = fechaPagoEsperado(canal, p.creadoEn);
       const grupo = resumen.get(canal)!;
       grupo.cantidad++;
@@ -180,10 +239,22 @@ export async function GET() {
         canal,
         sinIngresoDinero: clasificacion.sinIngresoDinero,
         pasarela: clasificacion.pasarela,
+        addiShop: esAddiShop,
       });
     }
 
     const canales = Array.from(resumen.values());
+    const avisos: string[] = [];
+    if (pagos === null && idsShopify.length > 0) {
+      avisos.push(
+        "No se pudo consultar el método de pago en Shopify: los pedidos sin \"Ingreso Dinero\" se tomaron como contraentrega, así que la separación por canal es aproximada."
+      );
+    }
+    if (addiShop === null && resumen.get("ADDI")!.cantidad > 0) {
+      avisos.push(
+        "No se pudo verificar en Shopify cuáles pedidos de Addi vienen de Addi Shop: todos se estimaron con la comisión normal de Addi."
+      );
+    }
     const datos: DineroPorEntrarDatos = {
       canales,
       total: {
@@ -193,10 +264,7 @@ export async function GET() {
       },
       historicoSinConciliar,
       fechaCorte: corte.toISOString(),
-      avisoShopify:
-        pagos === null && idsShopify.length > 0
-          ? "No se pudo consultar el método de pago en Shopify: los pedidos sin \"Ingreso Dinero\" se tomaron como contraentrega, así que la separación por canal es aproximada."
-          : null,
+      avisoShopify: avisos.length > 0 ? avisos.join(" ") : null,
     };
 
     return NextResponse.json(datos);
