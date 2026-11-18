@@ -10,6 +10,7 @@ import { ErrorValidacion } from "@/lib/errores";
 import { capturarError } from "@/lib/sentry";
 import { esFinanciacionDiferida } from "@/lib/financiacion";
 import { afectaSaldoPorFecha } from "@/lib/balanceCorte";
+import { fechaDesdeInputColombia } from "@/lib/fechas";
 
 export async function GET(
   _req: NextRequest,
@@ -55,6 +56,10 @@ export async function PATCH(
         data[key] = limpio;
       } else if (key === "cliente") {
         data[key] = normalizarNombre(value as string);
+      } else if (key === "devolucionRecibidaEn") {
+        // Llega como "YYYY-MM-DD" desde un <input type="date">; Prisma
+        // necesita un DateTime completo, no solo la fecha.
+        data[key] = value ? fechaDesdeInputColombia(value as string) : null;
       } else {
         data[key] = value === "" ? null : value;
       }
