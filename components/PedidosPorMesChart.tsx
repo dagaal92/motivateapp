@@ -14,9 +14,9 @@ const MESES_LARGOS = [
 ];
 
 const WIDTH = 640;
-const HEIGHT = 220;
-const PAD_TOP = 32;
-const PAD_BOTTOM = 26;
+const HEIGHT = 170;
+const PAD_TOP = 26;
+const PAD_BOTTOM = 20;
 const PAD_X = 16;
 const PLOT_W = WIDTH - PAD_X * 2;
 const PLOT_H = HEIGHT - PAD_TOP - PAD_BOTTOM;
@@ -46,8 +46,8 @@ export default function PedidosPorMesChart({
   const activo = hoverIdx !== null ? puntos[hoverIdx] : null;
 
   return (
-    <div className="bg-card border border-borderLight rounded-xl p-5">
-      <div className="flex items-center justify-between mb-2">
+    <div className="bg-card border border-borderLight rounded-xl p-4">
+      <div className="flex items-center justify-between mb-1.5">
         <p className="text-sm font-semibold text-ink2">Total de pedidos por mes</p>
         <button
           onClick={() => setTablaAbierta((v) => !v)}

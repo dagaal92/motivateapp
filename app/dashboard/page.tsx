@@ -297,16 +297,16 @@ export default function DashboardPage() {
   const maxGasto = gastos && gastos.categorias.length > 0 ? gastos.categorias[0].total : 0;
 
   return (
-    <main className="p-4 sm:p-6 max-w-[1400px] mx-auto space-y-5">
-      <div className="bg-card border border-borderLight rounded-xl p-5">
-        <div className="flex items-start justify-between flex-wrap gap-4">
+    <main className="p-4 sm:p-6 max-w-[1400px] mx-auto space-y-4">
+      <div className="bg-card border border-borderLight rounded-xl p-4">
+        <div className="flex items-start justify-between flex-wrap gap-3">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-lg bg-accentSoft text-accent flex items-center justify-center">
-              <LayoutDashboard size={20} />
+            <div className="w-9 h-9 rounded-lg bg-accentSoft text-accent flex items-center justify-center">
+              <LayoutDashboard size={16} />
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-ink2">Dashboard</h1>
-              <p className="text-sm text-muted2">
+              <h1 className="text-lg font-semibold text-ink2">Dashboard</h1>
+              <p className="text-xs text-muted2">
                 Resumen de pedidos y ventas del periodo
               </p>
             </div>
@@ -380,23 +380,23 @@ export default function DashboardPage() {
       ) : (
         datos && (
           <>
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
               {tarjetas.map((t) => (
                 <div
                   key={t.label}
-                  className="bg-card border border-borderLight rounded-xl p-3 sm:p-5"
+                  className="bg-card border border-borderLight rounded-xl p-2.5 sm:p-3"
                 >
-                  <div className="flex flex-col sm:flex-row items-start gap-2 sm:gap-3">
+                  <div className="flex flex-col sm:flex-row items-start gap-1.5 sm:gap-2">
                     <div
-                      className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg ${t.bg} ${t.fg} flex items-center justify-center shrink-0`}
+                      className={`w-7 h-7 sm:w-9 sm:h-9 rounded-lg ${t.bg} ${t.fg} flex items-center justify-center shrink-0`}
                     >
-                      <t.icon size={18} />
+                      <t.icon size={16} />
                     </div>
                     <div className="min-w-0">
                       <p className="text-[11px] sm:text-xs font-medium text-muted2 leading-tight">
                         {t.label}
                       </p>
-                      <p className="text-lg sm:text-2xl font-semibold text-ink2 mt-0.5 truncate">
+                      <p className="text-base sm:text-xl font-semibold text-ink2 mt-0.5 truncate">
                         {t.valor}
                       </p>
                       {t.sub && (
@@ -417,28 +417,28 @@ export default function DashboardPage() {
               <div className="flex-1 h-px bg-borderLight" />
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
               {tarjetasDevoluciones.map((t) => (
                 <div
                   key={t.label}
                   onClick={t.onClick}
                   role={t.onClick ? "button" : undefined}
                   tabIndex={t.onClick ? 0 : undefined}
-                  className={`bg-card border border-borderLight rounded-xl p-3 sm:p-5 ${
+                  className={`bg-card border border-borderLight rounded-xl p-2.5 sm:p-3 ${
                     t.onClick ? "cursor-pointer hover:border-amber2 transition-colors" : ""
                   }`}
                 >
-                  <div className="flex flex-col sm:flex-row items-start gap-2 sm:gap-3">
+                  <div className="flex flex-col sm:flex-row items-start gap-1.5 sm:gap-2">
                     <div
-                      className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg ${t.bg} ${t.fg} flex items-center justify-center shrink-0`}
+                      className={`w-7 h-7 sm:w-9 sm:h-9 rounded-lg ${t.bg} ${t.fg} flex items-center justify-center shrink-0`}
                     >
-                      <t.icon size={18} />
+                      <t.icon size={16} />
                     </div>
                     <div className="min-w-0">
                       <p className="text-[11px] sm:text-xs font-medium text-muted2 leading-tight">
                         {t.label}
                       </p>
-                      <p className="text-lg sm:text-2xl font-semibold text-ink2 mt-0.5 truncate">
+                      <p className="text-base sm:text-xl font-semibold text-ink2 mt-0.5 truncate">
                         {t.valor}
                       </p>
                       {t.sub && (
@@ -474,22 +474,22 @@ export default function DashboardPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3">
             <div
               onClick={() => setCanalPorEntrar("TOTAL")}
               role="button"
               tabIndex={0}
-              className="col-span-2 lg:col-span-1 bg-card border border-borderLight rounded-xl p-3 sm:p-5 cursor-pointer hover:border-green transition-colors"
+              className="col-span-2 lg:col-span-1 bg-card border border-borderLight rounded-xl p-2.5 sm:p-3 cursor-pointer hover:border-green transition-colors"
             >
-              <div className="flex flex-col sm:flex-row items-start gap-2 sm:gap-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-greenSoft text-green flex items-center justify-center shrink-0">
-                  <HandCoins size={18} />
+              <div className="flex flex-col sm:flex-row items-start gap-1.5 sm:gap-2">
+                <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-greenSoft text-green flex items-center justify-center shrink-0">
+                  <HandCoins size={16} />
                 </div>
                 <div className="min-w-0">
                   <p className="text-[11px] sm:text-xs font-medium text-muted2 leading-tight">
                     Total por entrar
                   </p>
-                  <p className="text-lg sm:text-2xl font-semibold text-ink2 mt-0.5 truncate">
+                  <p className="text-base sm:text-xl font-semibold text-ink2 mt-0.5 truncate">
                     {fmt(porEntrar.total.bruto)}
                   </p>
                   <p className="text-[10px] sm:text-[11px] text-muted2 mt-0.5 leading-tight">
@@ -508,19 +508,19 @@ export default function DashboardPage() {
                   onClick={() => setCanalPorEntrar(c.canal)}
                   role="button"
                   tabIndex={0}
-                  className={`bg-card border border-borderLight rounded-xl p-3 sm:p-5 cursor-pointer transition-colors ${estilo.hover}`}
+                  className={`bg-card border border-borderLight rounded-xl p-2.5 sm:p-3 cursor-pointer transition-colors ${estilo.hover}`}
                 >
-                  <div className="flex flex-col sm:flex-row items-start gap-2 sm:gap-3">
+                  <div className="flex flex-col sm:flex-row items-start gap-1.5 sm:gap-2">
                     <div
-                      className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg ${estilo.bg} ${estilo.fg} flex items-center justify-center shrink-0`}
+                      className={`w-7 h-7 sm:w-9 sm:h-9 rounded-lg ${estilo.bg} ${estilo.fg} flex items-center justify-center shrink-0`}
                     >
-                      <estilo.icon size={18} />
+                      <estilo.icon size={16} />
                     </div>
                     <div className="min-w-0">
                       <p className="text-[11px] sm:text-xs font-medium text-muted2 leading-tight">
                         {CANAL_INFO[c.canal].label}
                       </p>
-                      <p className="text-lg sm:text-2xl font-semibold text-ink2 mt-0.5 truncate">
+                      <p className="text-base sm:text-xl font-semibold text-ink2 mt-0.5 truncate">
                         {fmt(c.bruto)}
                       </p>
                       <p className="text-[10px] sm:text-[11px] text-muted2 mt-0.5 leading-tight">
@@ -558,23 +558,23 @@ export default function DashboardPage() {
             <div className="flex-1 h-px bg-borderLight" />
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
             {tarjetasGastos.map((t) => (
               <div
                 key={t.label}
-                className="bg-card border border-borderLight rounded-xl p-3 sm:p-5"
+                className="bg-card border border-borderLight rounded-xl p-2.5 sm:p-3"
               >
-                <div className="flex flex-col sm:flex-row items-start gap-2 sm:gap-3">
+                <div className="flex flex-col sm:flex-row items-start gap-1.5 sm:gap-2">
                   <div
-                    className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg ${t.bg} ${t.fg} flex items-center justify-center shrink-0`}
+                    className={`w-7 h-7 sm:w-9 sm:h-9 rounded-lg ${t.bg} ${t.fg} flex items-center justify-center shrink-0`}
                   >
-                    <t.icon size={18} />
+                    <t.icon size={16} />
                   </div>
                   <div className="min-w-0">
                     <p className="text-[11px] sm:text-xs font-medium text-muted2 leading-tight">
                       {t.label}
                     </p>
-                    <p className="text-lg sm:text-2xl font-semibold text-ink2 mt-0.5 truncate">
+                    <p className="text-base sm:text-xl font-semibold text-ink2 mt-0.5 truncate">
                       {t.valor}
                     </p>
                     {t.sub && (
@@ -589,14 +589,14 @@ export default function DashboardPage() {
           </div>
 
           <div className="bg-card border border-borderLight rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-borderLight">
+            <div className="px-4 py-2.5 border-b border-borderLight">
               <p className="text-sm font-semibold text-ink2">Gastos por categoría</p>
               <p className="text-xs text-muted2">
                 Clic en una categoría para ver los movimientos que la componen
               </p>
             </div>
             {gastos.categorias.length === 0 ? (
-              <p className="text-sm text-muted2 p-5">
+              <p className="text-sm text-muted2 p-4">
                 No hay gastos registrados en este periodo.
               </p>
             ) : (
@@ -611,7 +611,7 @@ export default function DashboardPage() {
                     <button
                       key={cat.categoria}
                       onClick={() => setCategoriaGastoSeleccionada(cat.categoria)}
-                      className="w-full flex items-center gap-4 px-5 py-3.5 border-t border-borderLight first:border-t-0 hover:bg-paper transition-colors text-left"
+                      className="w-full flex items-center gap-3 px-4 py-2 border-t border-borderLight first:border-t-0 hover:bg-paper transition-colors text-left"
                     >
                       <div className="w-32 sm:w-44 shrink-0 text-xs sm:text-sm font-medium text-ink2 truncate">
                         {cat.categoria}
