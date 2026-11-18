@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { capturarError } from "@/lib/sentry";
 import { fechaDesdeInputColombia } from "@/lib/fechas";
-import { afectaSaldoPorFecha } from "@/lib/balanceCorte";
+import { crearMovimiento } from "@/lib/movimientos";
 
 export const dynamic = "force-dynamic";
 
@@ -47,37 +47,17 @@ export async function POST(req: NextRequest) {
     if (isNaN(fechaMovimiento.getTime())) {
       return NextResponse.json({ error: "Fecha inválida" }, { status: 400 });
     }
-    const afectaSaldo = afectaSaldoPorFecha(fechaMovimiento);
 
-    const resultado = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      const cuenta = await tx.cuenta.findUnique({ where: { id: cuentaId } });
-      if (!cuenta) throw new Error("Cuenta no encontrada");
-
-      // Un movimiento fechado antes del corte (lib/balanceCorte.ts) queda
-      // como registro histórico puro: se guarda, pero no toca el saldo.
-      const cuentaActualizada = afectaSaldo
-        ? await tx.cuenta.update({
-            where: { id: cuentaId },
-            data: {
-              saldo: tipo === "INGRESO" ? cuenta.saldo + montoNum : cuenta.saldo - montoNum,
-            },
-          })
-        : cuenta;
-
-      const movimiento = await tx.movimiento.create({
-        data: {
-          cuentaId,
-          tipo,
-          monto: montoNum,
-          descripcion: descripcion || null,
-          categoria,
-          fecha: fechaMovimiento,
-          afectaSaldo,
-        },
-      });
-
-      return { cuenta: cuentaActualizada, movimiento };
-    });
+    const resultado = await prisma.$transaction((tx: Prisma.TransactionClient) =>
+      crearMovimiento(tx, {
+        cuentaId,
+        tipo,
+        monto: montoNum,
+        categoria,
+        descripcion,
+        fecha: fechaMovimiento,
+      })
+    );
 
     return NextResponse.json(resultado, { status: 201 });
   } catch (error) {

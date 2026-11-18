@@ -143,6 +143,43 @@ export async function enviarPlantillaGuia(
   return { wamid: await extraerWamid(res), contenido };
 }
 
+/**
+ * Manda un mensaje de texto libre (no plantilla). Solo funciona dentro de
+ * las 24 horas de la última respuesta del destinatario (ventana de
+ * servicio de WhatsApp) — sirve para contestar al comando de movimientos
+ * por WhatsApp, que siempre es una respuesta a algo que el dueño acaba de
+ * escribir.
+ */
+export async function enviarTextoWhatsapp(telefono: string, texto: string): Promise<void> {
+  const apiKey = process.env.KAPSO_API_KEY;
+  const phoneNumberId = process.env.KAPSO_PHONE_NUMBER_ID;
+  if (!apiKey || !phoneNumberId) {
+    throw new Error("Faltan KAPSO_API_KEY o KAPSO_PHONE_NUMBER_ID en el .env");
+  }
+
+  const res = await fetch(
+    `https://api.kapso.ai/meta/whatsapp/v24.0/${phoneNumberId}/messages`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": apiKey,
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: telefono,
+        type: "text",
+        text: { body: texto },
+      }),
+    }
+  );
+
+  if (!res.ok) {
+    const detalle = await res.text().catch(() => "");
+    throw new Error(`Kapso respondió ${res.status} al enviar texto libre: ${detalle}`);
+  }
+}
+
 const IMAGEN_ENCABEZADO_CONFIRMACION_PAGADO =
   "https://cdn.shopify.com/s/files/1/0570/9751/9284/files/Confirmar_Pedido-_-Pago_Online.jpg?v=1789994889";
 const IMAGEN_ENCABEZADO_CONFIRMACION_CONTRAENTREGA =
